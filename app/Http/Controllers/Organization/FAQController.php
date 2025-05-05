@@ -52,7 +52,7 @@ class FAQController extends Controller
     {
         $faq = FAQ::paginate(10);
 
-        return response()->json(['status'=>true, $faq],201);
+        return response()->json(['status'=>true, 'data' =>$faq],201);
     }
     //delete faq
     public function deleteFaq($id)

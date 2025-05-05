@@ -85,6 +85,7 @@ Route::middleware(['auth:api', 'super_admin'])->group(function () {
     //faq
     Route::post('create-faq', [FAQController::class, 'createFaq']);
     Route::post('update-faq/{id}', [FAQController::class, 'updateFaq']);
+    Route::get('faq_list', [FAQController::class, 'listFaq'])->withoutMiddleware(['auth:api','super_admin']);
     Route::delete('delete-faq/{id}', [FAQController::class, 'deleteFaq']);
 
     //report
