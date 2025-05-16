@@ -38,7 +38,7 @@ class SettingController extends Controller
 
     public function listSetting(Request $request)
     {
-        $setting = Setting::where('type', $request->type)->first();
+        $setting = Setting::where('type', 'LIKE','%'.$request->type.'%')->first();
 
         if (!$setting) {
             return response()->json([

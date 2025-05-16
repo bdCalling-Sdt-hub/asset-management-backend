@@ -3,12 +3,12 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\Asset;
+use App\Models\InspectionSheet;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\NewTicketNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class TicketController extends Controller
@@ -38,7 +38,7 @@ class TicketController extends Controller
             'user_comment'  => $request->user_comment,
             'ticket_status' => $request->ticket_status ?? 'New',
             'cost'          => $request->cost ?? null,
-            'order_number'  => $request->order_number,
+            'order_number'  => rand(10000000, 99999999),
         ]);
 
         // Eager load the related user and asset
@@ -97,33 +97,81 @@ class TicketController extends Controller
         ], 200);
     }
 
-    //all ticket list with status
+    //all ticket list with status dsf
+    // public function ticketList(Request $request)
+    // {
+    //     $perPage = $request->input('per_page', 10);
+    //     $search  = $request->input('search');
+    //     $filter  = $request->input('filter');
+    //     if (Auth::user()->role == 'technician') {
+    //         $assign_ticket_ids = InspectionSheet::where('technician_id', Auth::user()->id)->get()->pluck('ticket_id')->unique();
+    //         $ticketList        = Ticket::with('user:id,name,address,phone', 'asset:id,product,brand,serial_number')->whereIn('id', $assign_ticket_ids);
+    //     }
+    //                 // $ticketList = Ticket::with('user:id,name,address,phone', 'asset:id,product,brand,serial_number');
+
+    //     if (Auth::user()->role == 'user') {
+    //         $ticketList = $ticketList->where('user_id', Auth::user()->id);
+    //     }
+    //     //search
+    //     if ($search) {
+    //         $ticketList = $ticketList->where('ticket_type', $search)
+    //         ->orWhere('order_number',"LIKE","%".$search."%");
+    //     }
+    //     // Apply role filter
+    //     if (! empty($filter)) {
+    //         $ticketList->where('ticket_status', $filter);
+    //     }
+    //     $ticketList = $ticketList->paginate($perPage);
+    //     return response()->json([
+    //         'status' => true,
+    //         'data'   => $ticketList,
+
+    //     ]);
+    // }
+
     public function ticketList(Request $request)
     {
-        $perPage    = $request->input('per_page', 10);
-        $search     = $request->input('search');
-        $filter     = $request->input('filter');
-        $ticketList = Ticket::with('user:id,name,address,phone', 'asset:id,product,brand,serial_number');
-        //search
+        $perPage = $request->input('per_page', 10);
+        $search  = $request->input('search');
+        $filter  = $request->input('filter');
+
+        if (Auth::user()->role == 'technician') {
+            $assign_ticket_ids = InspectionSheet::where('technician_id', Auth::user()->id)
+                ->pluck('ticket_id')
+                ->unique();
+            $ticketList = Ticket::with('user:id,name,address,phone', 'asset:id,product,brand,serial_number')
+                ->whereIn('id', $assign_ticket_ids);
+        } else {
+            // Default for normal users
+            $ticketList = Ticket::with('user:id,name,address,phone', 'asset:id,product,brand,serial_number')
+                ->where('user_id', Auth::user()->id);
+        }
+
+        // search (restricted within user's own data)
         if ($search) {
-            $ticketList = $ticketList->where('ticket_type', $search);
+            $ticketList = $ticketList->where(function ($query) use ($search) {
+                $query->where('ticket_type', 'LIKE', "%{$search}%")
+                    ->orWhere('order_number', 'LIKE', "%{$search}%");
+            });
         }
-        // Apply role filter
+
+        // filter
         if (! empty($filter)) {
-            $ticketList->where('ticket_status', $filter);
+            $ticketList = $ticketList->where('ticket_status', $filter);
         }
+
         $ticketList = $ticketList->paginate($perPage);
+
         return response()->json([
             'status' => true,
             'data'   => $ticketList,
-
         ]);
     }
 
     //get ticket details
     public function ticketDetails(Request $request, $id)
     {
-        $ticket = Ticket::with('user:id,name,address', 'asset:id,product,brand,serial_number')->find($id);
+        $ticket = Ticket::with('user:id,name,address', 'asset:id,product,brand,serial_number', 'assigned_user:id,name,address')->find($id);
 
         if (! $ticket) {
             return response()->json(['status' => false, 'message' => 'Ticket Not Found'], status: 200);
@@ -170,79 +218,6 @@ class TicketController extends Controller
             'status' => true,
             'data'   => $data,
         ]);
-    }
-    //get all notification
-    public function getNotifications(Request $request)
-    {
-        $perPage = $request->query('per_page', 10);
-        $user = Auth::user();
-
-        if (!$user) {
-            return response()->json([
-                'status' => false,'message'=>'Authorization User Not Found'], 401);
-        }
-
-        $notifications = $user->notifications()->paginate($perPage);
-        $unread = DB::table('notifications')->where('notifiable_id', 1)->whereNull('read_at')->count();
-
-        if ($notifications->isEmpty()) {
-            return response()->json([
-                'status' => false,
-                'message' => 'No notifications available.',
-            ], 422);
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'unread_notification' => $unread,
-            'notifications' => $notifications,
-        ], 200);
-
-    }
-    //read one notification
-    public function markNotification($notificationId)
-    {
-        $user = Auth::user();
-
-        if (!$user) {
-            return response()->json(['status' => false,'message'=>'Authorization User Not Found'], 401);
-        }
-
-        $notification = $user->notifications()->find($notificationId);
-
-        if (!$notification) {
-            return response()->json(['message' => 'Notification not found.'], 401);
-        }
-
-        if (!$notification->read_at) {
-            $notification->markAsRead();
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Notification marked as read.'], 200);
-    }
-    //read all notification
-    public function markAllNotification(Request $request)
-    {
-        $user = Auth::user();
-
-        if (!$user) {
-            return response()->json(['status' => false,'message'=>'Authorization User Not Found'], 401);
-        }
-
-        $notifications = $user->unreadNotifications;
-
-        if ($notifications->isEmpty()) {
-            return response()->json(['message' => 'No unread notifications found.'], 401);
-        }
-
-        $notifications->markAsRead();
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'All notifications marked as read.',
-        ], 200);
     }
 
 }

@@ -1,11 +1,13 @@
 <?php
 namespace App\Http\Controllers\SupportAgent;
 
+use App\Http\Controllers\Controller;
+use App\Models\InspectionSheet;
 use App\Models\JobCard;
+use App\Models\Ticket;
+use App\Models\User;
 use App\Notifications\JobCardNotification;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
@@ -57,44 +59,125 @@ class JobCardController extends Controller
         return response()->json(['status' => true, 'message' => 'Job Card Create Successfully', 'data' => $job_card], 201);
 
     }
+    // public function updateJobCard(Request $request, $id)
+    // {
+
+    //     $job_card = JobCard::with('supportAgent:id,name',
+    //         'inspectionSheet:id,ticket_id,technician_id',
+    //         'inspectionSheet.technician:id,name,image',
+    //         'inspectionSheet.ticket:id,asset_id,problem,order_number,cost,user_id',
+    //         'inspectionSheet.ticket.asset:id,product,brand,serial_number',
+    //         'inspectionSheet.ticket.user:id,name,address,phone')->findOrFail($id);
+
+    //     if (! $job_card) {
+    //         return response()->json(['status' => false, 'message' => 'Job Card Not Found'], 422);
+    //     }
+    //     $validator = Validator::make($request->all(), [
+    //         'job_card_type'               => 'nullable|string',
+    //         'support_agent_comment'       => 'nullable|string',
+    //         'technician_comment'          => 'nullable|string',
+    //         'location_employee_signature' => 'nullable|string',
+    //         'job_status'                  => 'nullable|string|in:New,Assigned,In Progress,On hold,Cancel,To be allocated,Awaiting courier
+    //                                                             ,Collected by courier,Parts required,Picking,To be invoiced,Invoiced,Completed',
+    //     ]);
+    //     $validatedData = $validator->validated();
+
+    //     if (isset($validatedData['job_status'])) {
+    //         $validatedData['job_card_type'] = ($validatedData['job_status'] === 'Completed') ? 'Past Cards' : 'Open Cards';
+    //     } elseif ($job_card->job_status === 'Completed') {
+    //         $validatedData['job_card_type'] = 'Past Cards';
+    //     } else {
+    //         $validatedData['job_card_type'] = 'Open Cards';
+    //     }
+    //     $job_card->update($validatedData);
+
+    //     return response()->json([
+    //         'status'  => true,
+    //         'message' => 'Inspection Sheet Update Successfully',
+    //         'data'    => $job_card,
+    //     ]);
+
+    // }
+
     public function updateJobCard(Request $request, $id)
     {
-        $job_card = JobCard::with('supportAgent:id,name',
+        $validator = Validator::make($request->all(), [
+            'images'   => 'sometimes|array',
+            'images.*' => 'image|mimes:jpeg,png,jpg|max:10240',
+            'videos'   => 'sometimes|array',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => false,
+                'message' => $validator->errors(),
+            ]);
+        }
+        $job_card = JobCard::with(
+            'supportAgent:id,name',
             'inspectionSheet:id,ticket_id,technician_id',
             'inspectionSheet.technician:id,name,image',
             'inspectionSheet.ticket:id,asset_id,problem,order_number,cost,user_id',
             'inspectionSheet.ticket.asset:id,product,brand,serial_number',
-            'inspectionSheet.ticket.user:id,name,address,phone')->findOrFail($id);
+            'inspectionSheet.ticket.user:id,name,address,phone'
+        )->findOrFail($id);
 
         if (! $job_card) {
             return response()->json(['status' => false, 'message' => 'Job Card Not Found'], 422);
         }
-        $validator = Validator::make($request->all(), [
-            'job_card_type'               => 'nullable|string',
-            'support_agent_comment'       => 'nullable|string',
-            'technician_comment'          => 'nullable|string',
-            'location_employee_signature' => 'nullable|string',
-            'job_status'                  => 'nullable|string|in:New,Assigned,In Progress,On hold,Cancel,To be allocated,Awaiting courier
-                                                                ,Collected by courier,Parts required,Picking,To be invoiced,Invoiced,Completed',
-        ]);
-        $validatedData = $validator->validated();
 
-        if (isset($validatedData['job_status'])) {
-            $validatedData['job_card_type'] = ($validatedData['job_status'] === 'Completed') ? 'Past Cards' : 'Open Cards';
-        } elseif ($job_card->job_status === 'Completed') {
-            $validatedData['job_card_type'] = 'Past Cards';
-        } else {
-            $validatedData['job_card_type'] = 'Open Cards';
+        if ($request->has('support_agent_comment')) {
+            $job_card->support_agent_comment = $request->support_agent_comment;
         }
-        $job_card->update($validatedData);
+
+        if ($request->has('technician_comment')) {
+            $job_card->technician_comment = $request->technician_comment;
+        }
+
+        if ($request->has('location_employee_signature')) {
+            $job_card->location_employee_signature = $request->location_employee_signature;
+        }
+
+        if ($request->has('job_status')) {
+            $job_card->job_status    = $request->job_status;
+            $job_card->job_card_type = ($request->job_status === 'Completed') ? 'Past Cards' : 'Open Cards';
+        } else {
+            $job_card->job_card_type = ($job_card->job_status === 'Completed') ? 'Past Cards' : 'Open Cards';
+        }
+
+        if ($request->hasFile('images')) {
+            $newImages = [];
+            foreach ($request->file('images') as $image) {
+                $ImageName = time() . uniqid() . $image->getClientOriginalName();
+                $image->move(public_path('uploads/job_card_images'), $ImageName);
+                $newImages[] = $ImageName;
+            }
+
+            $job_card->image = $newImages;
+        }
+
+        // Handle video update or add
+        if ($request->hasFile('videos')) {
+
+            // Upload new videos
+            $newVideos = [];
+            foreach ($request->file('videos') as $video) {
+                $VideoName = time() . uniqid() . $video->getClientOriginalName();
+                $video->move(public_path('uploads/job_card_videos'), $VideoName);
+                $newVideos[] = $VideoName;
+            }
+
+            $job_card->video = $newVideos;
+        }
+
+        $job_card->save();
 
         return response()->json([
             'status'  => true,
-            'message' => 'Inspection Sheet Update Successfully',
+            'message' => 'Job card Update Successfully',
             'data'    => $job_card,
         ]);
-
     }
+
     public function deleteJobCard($id)
     {
         $job_card = JobCard::find($id);
@@ -114,13 +197,27 @@ class JobCardController extends Controller
         $search  = $request->input('search');
         $filter  = $request->input('filter');
 
-        $cardList = JobCard::with('supportAgent:id,name',
-            'inspectionSheet:id,ticket_id,support_agent_id,technician_id',
-            'inspectionSheet.assigned:id,name',
-            'inspectionSheet.technician:id,name,image',
-            'inspectionSheet.ticket:id,asset_id,problem,order_number,cost,user_id',
-            'inspectionSheet.ticket.asset:id,product,brand,serial_number',
-            'inspectionSheet.ticket.user:id,name,address,phone');
+        if (Auth::user()->role == 'technician') {
+            $assign_ticket_ids = InspectionSheet::where('technician_id', Auth::user()->id)
+                ->pluck('ticket_id')
+                ->unique();
+            $ticketListIds = Ticket::whereIn('id', $assign_ticket_ids)->pluck('id');
+            $cardList      = JobCard::with('supportAgent:id,name',
+                'inspectionSheet:id,ticket_id,support_agent_id,technician_id',
+                'inspectionSheet.assigned:id,name',
+                'inspectionSheet.technician:id,name,image',
+                'inspectionSheet.ticket:id,asset_id,problem,order_number,cost,user_id',
+                'inspectionSheet.ticket.asset:id,product,brand,serial_number',
+                'inspectionSheet.ticket.user:id,name,address,phone')->whereIn('ticket_id', $ticketListIds);
+        } else {
+            $cardList = JobCard::with('supportAgent:id,name',
+                'inspectionSheet:id,ticket_id,support_agent_id,technician_id',
+                'inspectionSheet.assigned:id,name',
+                'inspectionSheet.technician:id,name,image',
+                'inspectionSheet.ticket:id,asset_id,problem,order_number,cost,user_id',
+                'inspectionSheet.ticket.asset:id,product,brand,serial_number',
+                'inspectionSheet.ticket.user:id,name,address,phone');
+        }
 
         if ($search) {
             $cardList = $cardList->where('inspection_sheet_type', $search);
@@ -147,75 +244,9 @@ class JobCardController extends Controller
 
         return response()->json([
             'status' => true,
-            'data'   =>$card_details
+            'data'   => $card_details,
         ]);
 
     }
-
-    //notification part
-     //get all notification
-     public function notifications(Request $request)
-     {
-         $perPage = $request->query('per_page', 10);
-         $user = Auth::user();
-
-         if (!$user) {
-             return response()->json(['status' => false, 'message' => 'Authorization User Not Found'], 401);
-         }
-
-         $notifications = $user->notifications()->paginate($perPage);
-         $unreadCount = $user->unreadNotifications()->count();
-
-         return response()->json([
-             'status' => 'success',
-             'unread_notifications' => $unreadCount,
-             'notifications' => $notifications,
-         ], 200);
-     }
-     //read one notification
-     public function notificationMark($notificationId)
-     {
-         $user = Auth::user();
-
-         if (!$user) {
-             return response()->json(['status' => false,'message'=>'Authorization User Not Found'], 401);
-         }
-
-         $notification = $user->notifications()->find($notificationId);
-
-         if (!$notification) {
-             return response()->json(['message' => 'Notification not found.'], 401);
-         }
-
-         if (!$notification->read_at) {
-             $notification->markAsRead();
-         }
-
-         return response()->json([
-             'status' => 'success',
-             'message' => 'Notification marked as read.'], 200);
-     }
-     //read all notification
-     public function allNotificationMark(Request $request)
-     {
-         $user = Auth::user();
-
-         if (!$user) {
-             return response()->json(['status' => false,'message'=>'Authorization User Not Found'], 401);
-         }
-
-         $notifications = $user->unreadNotifications;
-
-         if ($notifications->isEmpty()) {
-             return response()->json(['status'=>'true','message' => 'No unread notifications found.'], 200);
-         }
-
-         $notifications->markAsRead();
-
-         return response()->json([
-             'status' => 'success',
-             'message' => 'All notifications marked as read.',
-         ], 200);
-     }
 
 }

@@ -222,6 +222,7 @@ class AuthController extends Controller
     // update profile
     public function updateProfile(Request $request)
     {
+
         $user = Auth::guard('api')->user();
 
         if (! $user) {
@@ -233,7 +234,7 @@ class AuthController extends Controller
             'address'     => 'nullable|string|max:255',
             'phone'       => 'nullable|string|max:16',
             'password'    => 'nullable|string|min:6|confirmed',
-            'image'       => 'nullable|file',
+            'image'   => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:10240',
             'documents.*' => 'nullable|file',
         ]);
 
@@ -252,24 +253,25 @@ class AuthController extends Controller
         }
 
         if ($request->hasFile('image')) {
+            // return 'ami image paisi';
             $existingImage = $user->image;
 
             if ($existingImage) {
-                $oldImage = parse_url($existingImage);
-                $filePath = ltrim($oldImage['path'], '/');
-                if (file_exists($filePath)) {
-                    unlink($filePath); // Delete the existing image
+                    $oldImage = parse_url($existingImage);
+                    $filePath = ltrim($oldImage['path'], '/');
+                    if (file_exists($filePath)) {
+                            unlink($filePath); // Delete the existing image
+                        }
+                    }
+
+                    // Upload new image
+                    $image     = $request->file('image');
+                    $extension = $image->getClientOriginalExtension();
+                    $newName   = time() . '.' . $extension;
+                    $image->move(public_path('uploads/profile_images'), $newName);
+
+                    $user->image = $newName;
                 }
-            }
-
-            // Upload new image
-            $image     = $request->file('image');
-            $extension = $image->getClientOriginalExtension();
-            $newName   = time() . '.' . $extension;
-            $image->move(public_path('uploads/profile_images'), $newName);
-
-            $user->image = $newName;
-        }
         //delete old document
         if ($request->hasFile('documents')) {
             $existingDocuments = $user->document;

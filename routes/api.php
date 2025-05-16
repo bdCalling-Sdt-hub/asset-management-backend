@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\MaintainanceController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Organization\AssetController;
 use App\Http\Controllers\Organization\FAQController;
 use App\Http\Controllers\Organization\ReportController;
@@ -85,13 +86,13 @@ Route::middleware(['auth:api', 'super_admin'])->group(function () {
     //faq
     Route::post('create-faq', [FAQController::class, 'createFaq']);
     Route::post('update-faq/{id}', [FAQController::class, 'updateFaq']);
-    Route::get('faq_list', [FAQController::class, 'listFaq'])->withoutMiddleware(['auth:api','super_admin']);
+    Route::get('faq_list', [FAQController::class, 'listFaq'])->withoutMiddleware(['auth:api', 'super_admin']);
     Route::delete('delete-faq/{id}', [FAQController::class, 'deleteFaq']);
 
     //report
-    Route::post('create-report',[ReportController::class,'createReport']);
-    Route::get('list-report',[ReportController::class,'listReports']);
-    Route::get('details-report/{id}',[ReportController::class,'detailsReports']);
+    Route::post('create-report', [ReportController::class, 'createReport']);
+    Route::get('list-report', [ReportController::class, 'listReports']);
+    Route::get('details-report/{id}', [ReportController::class, 'detailsReports']);
 
 });
 
@@ -99,9 +100,10 @@ Route::middleware(['auth:api', 'user'])->group(function () {
 
     //ticket
     Route::post('create-ticket', [TicketController::class, 'createTicket']);
-    Route::get('ticket-list', [TicketController::class, 'ticketList']);
+    // Route::get('ticket-list', [TicketController::class, 'ticketList']);
     Route::get('ticket-details/{id}', [TicketController::class, 'ticketDetails']);
     Route::delete('ticket-delete/{id}', [TicketController::class, 'deleteTicket']);
+    Route::get('qr-scan/{qrcode}', [AssetController::class, 'qrScan']);
 
 });
 
@@ -122,7 +124,6 @@ Route::middleware(['auth:api', 'common'])->group(function () {
     Route::get('settings', [SettingController::class, 'listSetting']);
     //faq list
     Route::get('faq-list', [FAQController::class, 'listFaq']);
-
 
 });
 Route::middleware(['auth:api', 'super_admin.third_party.organization'])->group(function () {
@@ -161,7 +162,6 @@ Route::middleware(['auth:api', 'super_admin.location_employee.organization'])->g
     Route::get('asset', [MaintainanceController::class, 'assetGet']);
     Route::get('maintainance', [MaintainanceController::class, 'maintainanceGet']);
 
-
 });
 
 Route::middleware(['auth:api', 'location_employee'])->group(function () {
@@ -189,7 +189,7 @@ Route::middleware(['auth:api', 'support_agent.location_employee.technician.third
     Route::delete('delete-inspection/{id}', [InspectionSheetController::class, 'deleteInspectionSheet']);
 
     Route::get('inspection-list', [InspectionSheetController::class, 'InspectionSheetList']);
-    Route::get('inspection-details/{id}', [InspectionSheetController::class, 'InspectionSheetDetails']);
+    Route::get('inspection-details', [InspectionSheetController::class, 'InspectionSheetDetails']);
 
     //job card update list details
     Route::post('update-card/{id}', [JobCardController::class, 'updateJobCard']);
@@ -198,20 +198,6 @@ Route::middleware(['auth:api', 'support_agent.location_employee.technician.third
     Route::get('card-list', [JobCardController::class, 'JobCardList']);
     Route::get('card-details/{id}', [JobCardController::class, 'detailsJobCard']);
 
-    //get notification when new ticket has been created
-    Route::get('get-notifications', [TicketController::class, 'getNotifications']);
-    Route::get('read-notifications/{notificationId}', [TicketController::class, 'markNotification']);
-    Route::get('read-all-notifications', [TicketController::class, 'markAllNotification']);
-
-    //notification
-    Route::get('notifications', [InspectionSheetController::class, 'getAllNotifications']);
-    Route::get('notification-read/{notificationId}', [InspectionSheetController::class, 'markNotification']);
-    Route::get('all-notifications-read', [InspectionSheetController::class, 'markAllNotification']);
-
-    //notification
-    Route::get('notification-get', [JobCardController::class, 'notifications']);
-    Route::get('notification-read-one/{notificationId}', [JobCardController::class, 'notificationMark']);
-    Route::get('notifications-read-all', [JobCardController::class, 'allNotificationMark']);
 });
 
 Route::middleware(['auth:api', 'organization'])->group(function () {
@@ -221,8 +207,8 @@ Route::middleware(['auth:api', 'organization'])->group(function () {
     Route::get('job-card-overview', [Organization::class, 'jobCardOverview']);
 
     //report
-    Route::post('add-report',[ReportController::class,'addReport']);
-    Route::get('get-report/{id}',[ReportController::class,'reportDetails']);
+    Route::post('add-report', [ReportController::class, 'addReport']);
+    Route::get('get-report/{id}', [ReportController::class, 'reportDetails']);
 
 });
 Route::middleware(['auth:api', 'support_agent'])->group(function () {
@@ -238,3 +224,11 @@ Route::middleware(['auth:api', 'location_employee'])->group(function () {
 
 });
 
+// notification
+Route::middleware(['auth:api', 'common'])->group(function () {
+    Route::get('notifications', [NotificationController::class, 'notifications'])->name('all_Notification');
+    Route::post('mark-notification/{id}', [NotificationController::class, 'singleMark'])->name('singleMark');
+    Route::post('mark-all-notification', [NotificationController::class, 'allMark'])->name('allMark');
+
+    Route::get('get-organization', [OrganizationController::class, 'getOrganization']);
+});

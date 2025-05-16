@@ -78,6 +78,8 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasMany(InspectionSheetController::class);
     }
-
+public function organization(){
+    return $this->belongsTo(User::class);
+}
 
 }

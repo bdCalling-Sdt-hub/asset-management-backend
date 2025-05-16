@@ -29,6 +29,10 @@ class Ticket extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+    public function assigned_user()
+    {
+        return $this->belongsTo(User::class, 'assigned_user_id');
+    }
 
     public function asset()
     {

@@ -252,4 +252,15 @@ class AssetController extends Controller
             'message' => 'Asset deleted successfully.',
         ], 200);
     }
+
+    public function qrScan($qrcode){
+        $asset=Asset::with('organization:id,name')->where('qr_code',$qrcode)->first();
+        $user=Auth::user();
+        $asset->location = $user->address;
+        return response()->json([
+            'status'  => true,
+            'message' => 'Asset get successfully.',
+            'data'=>$asset,
+        ], 200);
+    }
 }

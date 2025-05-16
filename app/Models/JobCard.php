@@ -30,4 +30,26 @@ class JobCard extends Model
         return $this->belongsTo(User::class, 'support_agent_id');
     }
 
+    // app/Models/JobCard.php
+    public function getImageAttribute($images)
+    {
+        if (! is_array($images)) {
+            return [];
+        }
+
+        return array_map(function ($image) {
+            return asset('uploads/job_card_images/' . $image);
+        }, $images);
+    }
+    public function getVideoAttribute($videos)
+    {
+        if (! is_array($videos)) {
+            return [];
+        }
+
+        return array_map(function ($video) {
+            return asset('uploads/job_card_videos/' . $video);
+        }, $videos);
+    }
+
 }

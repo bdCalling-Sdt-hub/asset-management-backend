@@ -1,9 +1,10 @@
 <?php
 namespace App\Http\Controllers\User;
 
-use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
@@ -262,6 +263,7 @@ class OrganizationController extends Controller
         }
 
         $technician = User::create([
+            'organization_id'=>Auth::user()->id,
             'name'       => $request->name,
             'email'      => $request->email,
             'role'       => 'technician',
@@ -273,7 +275,7 @@ class OrganizationController extends Controller
 
         $technician->save();
 
-        return response()->json(['status' => true, 'message' => 'Support Agent Create Successfully', 'technician' => $technician], 200);
+        return response()->json(['status' => true, 'message' => 'TTechnician Create Successfully', 'technician' => $technician], 200);
     }
     //update support_agent
     public function updateTechnician(Request $request, $id)
@@ -397,6 +399,17 @@ class OrganizationController extends Controller
         $user->delete();
 
         return response()->json(['message' => 'User deleted successfully'], 200);
+    }
+
+
+
+    public function getOrganization(){
+        $organizations=User::where('role','organization')->select('id','name')->get();
+        return response()->json([
+            'status'=>true,
+            'message'=>'Organization retreived successfully.',
+            'data'=>$organizations,
+        ]);
     }
 
 }
