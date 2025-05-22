@@ -31,8 +31,13 @@ class JobCard extends Model
     }
 
     // app/Models/JobCard.php
-    public function getImageAttribute($images)
+    public function getImageAttribute()
     {
+        $images = $this->attributes['image'] ?? [];
+        if (is_string($images)) {
+            $images = json_decode($images, true);
+        }
+
         if (! is_array($images)) {
             return [];
         }
@@ -41,8 +46,14 @@ class JobCard extends Model
             return asset('uploads/job_card_images/' . $image);
         }, $images);
     }
-    public function getVideoAttribute($videos)
+
+    public function getVideoAttribute()
     {
+        $videos = $this->attributes['video'] ?? [];
+        if (is_string($videos)) {
+            $videos = json_decode($videos, true);
+        }
+
         if (! is_array($videos)) {
             return [];
         }

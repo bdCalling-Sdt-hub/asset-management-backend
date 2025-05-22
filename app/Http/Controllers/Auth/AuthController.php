@@ -369,7 +369,9 @@ class AuthController extends Controller
 
         return response()->json([
             'status'  => true,
-            'message' => 'OTP sent to your email.'], 200);
+            'message' => 'OTP sent to your email.',
+            'otp'=>$otp,
+             200]);
     }
 
     // reset password

@@ -17,7 +17,7 @@ class MessageController extends Controller
             $users = $users->where('organization_id', $request->organization_id);
         }
         if ($request->search) {
-            $users = $users->where('name', 'LIKE', '%' . $request->search . '%')->orWher('email', 'LIKE', '%' . $request->search . '%');
+            $users = $users->where('name', 'LIKE', '%' . $request->search . '%')->orWhere('email', 'LIKE', '%' . $request->search . '%');
         }
 
         $users = $users->get();
@@ -64,74 +64,131 @@ class MessageController extends Controller
     // }
 
 
+    // public function chatList(Request $request)
+    // {
+    //     $userId   = Auth::user()->id;
+    //     $roleType = $request->role;
+    //     $search   = $request->search;
+
+    //     $chatList = Message::with([
+
+    //         'receiver:id,name,image', 'sender:id,name,image',
+    //         'sender:id,name,image', 'sender:id,name,image'
+    //     ])
+    //         ->where(function ($query) use ($userId) {
+    //             $query->where('sender_id', $userId)
+    //                 ->orWhere('receiver_id', $userId);
+    //         });
+
+    //     if ($roleType) {
+    //         $chatList = $chatList->where(function ($query) use ($roleType, $search) {
+    //             $query->whereHas('receiver', function ($q) use ($roleType, $search) {
+    //                 $q->where('role', $roleType);
+    //                 if ($search) {
+    //                     $q->where(function ($q) use ($search) {
+    //                         $q->where('name', 'like', '%' . $search . '%');
+    //                     });
+    //                 }
+    //             })->orWhereHas('sender', function ($q) use ($roleType, $search) {
+    //                 $q->where('role', $roleType);
+    //                 if ($search) {
+    //                     $q->where(function ($q) use ($search) {
+    //                         $q->where('name', 'like', '%' . $search . '%');
+    //                     });
+    //                 }
+    //             });
+    //         });
+    //     }
+
+    //     // Fetch and remove duplicate chat entries
+    //     $chatList = $chatList->latest('created_at')->get()->unique(function ($message) use ($userId) {
+    //         return $message->sender_id === $userId
+    //         ? $message->receiver_id// Use receiver_id if the sender is the authenticated user
+    //         : $message->sender_id; // Use sender_id if the receiver is the authenticated user
+    //     })->values();
+
+    //     // Format the response to show the other user's info only
+    //     $chatList = $chatList->map(function ($message) use ($userId) {
+    //         if ($message->sender_id === $userId) {
+    //             // If authenticated user is the sender, show receiver info
+    //             $message->user = $message->receiver;
+    //         } else {
+    //             // If authenticated user is the receiver, show sender info
+    //             $message->user = $message->sender;
+    //         }
+
+    //         // Optionally remove sender and receiver from response if not needed
+    //         unset($message->sender);
+    //         unset($message->receiver);
+
+    //         return $message;
+    //     });
+
+    //     // Standard JSON response
+    //     return response()->json([
+    //         'status'    => true,
+    //         'chat_list' => $chatList,
+    //     ]);
+    // }
+
+
+
     public function chatList(Request $request)
-    {
-        $userId   = Auth::user()->id;
-        $roleType = $request->role; // Either 'USER' or 'PROFESSIONAL'
-        $search   = $request->search;
+{
+    $userId   = Auth::id();
+    $roleType = $request->role;
+    $search   = $request->search;
 
-        // Base query with eager loading
-        $chatList = Message::with([
-
-            'receiver:id,name,image', 'sender:id,name,image',
-            'sender:id,name,image', 'sender:id,name,image'
-        ])
-            ->where(function ($query) use ($userId) {
-                $query->where('sender_id', $userId)
-                    ->orWhere('receiver_id', $userId);
-            });
-
-        // Apply role type filtering
-        if ($roleType) {
-            $chatList = $chatList->where(function ($query) use ($roleType, $search) {
-                $query->whereHas('receiver', function ($q) use ($roleType, $search) {
-                    $q->where('role', $roleType);
-                    if ($search) {
-                        $q->where(function ($q) use ($search) {
-                            $q->where('name', 'like', '%' . $search . '%');
-                        });
-                    }
-                })->orWhereHas('sender', function ($q) use ($roleType, $search) {
-                    $q->where('role', $roleType);
-                    if ($search) {
-                        $q->where(function ($q) use ($search) {
-                            $q->where('name', 'like', '%' . $search . '%');
-                        });
-                    }
-                });
-            });
-        }
-
-        // Fetch and remove duplicate chat entries
-        $chatList = $chatList->latest('created_at')->get()->unique(function ($message) use ($userId) {
-            return $message->sender_id === $userId
-            ? $message->receiver_id// Use receiver_id if the sender is the authenticated user
-            : $message->sender_id; // Use sender_id if the receiver is the authenticated user
-        })->values();
-
-        // Format the response to show the other user's info only
-        $chatList = $chatList->map(function ($message) use ($userId) {
-            if ($message->sender_id === $userId) {
-                // If authenticated user is the sender, show receiver info
-                $message->user = $message->receiver;
-            } else {
-                // If authenticated user is the receiver, show sender info
-                $message->user = $message->sender;
-            }
-
-            // Optionally remove sender and receiver from response if not needed
-            unset($message->sender);
-            unset($message->receiver);
-
-            return $message;
+    $chatList = Message::with(['receiver:id,name,image,role', 'sender:id,name,image,role'])
+        ->where(function ($query) use ($userId) {
+            $query->where('sender_id', $userId)
+                  ->orWhere('receiver_id', $userId);
         });
 
-        // Standard JSON response
-        return response()->json([
-            'status'    => true,
-            'chat_list' => $chatList,
-        ]);
+    // Apply search and role filter
+    if ($roleType || $search) {
+        $chatList->where(function ($query) use ($roleType, $search) {
+            // Filter receiver side
+            $query->whereHas('receiver', function ($q) use ($roleType, $search) {
+                if ($roleType) {
+                    $q->where('role', $roleType);
+                }
+                if ($search) {
+                    $q->where('name', 'like', '%' . $search . '%');
+                }
+            })
+            // OR filter sender side
+            ->orWhereHas('sender', function ($q) use ($roleType, $search) {
+                if ($roleType) {
+                    $q->where('role', $roleType);
+                }
+                if ($search) {
+                    $q->where('name', 'like', '%' . $search . '%');
+                }
+            });
+        });
     }
+
+    $chatList = $chatList->latest('created_at')->get()->unique(function ($message) use ($userId) {
+        return $message->sender_id === $userId
+            ? $message->receiver_id
+            : $message->sender_id;
+    })->values();
+
+    $chatList = $chatList->map(function ($message) use ($userId) {
+        $message->user = $message->sender_id === $userId
+            ? $message->receiver
+            : $message->sender;
+
+        unset($message->sender, $message->receiver);
+        return $message;
+    });
+
+    return response()->json([
+        'status'    => true,
+        'chat_list' => $chatList,
+    ]);
+}
 
 
 
@@ -197,7 +254,7 @@ class MessageController extends Controller
                 $query->where('sender_id', $request->receiver_id)
                     ->where('receiver_id', Auth::id());
             })
-            ->orderBy('created_at', 'desc')
+            ->orderBy('created_at', 'asc')
             ->paginate($per_page);
 
         return response()->json([

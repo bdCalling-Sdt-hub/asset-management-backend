@@ -141,9 +141,10 @@ class TicketController extends Controller
                 ->unique();
             $ticketList = Ticket::with('user:id,name,address,phone', 'asset:id,product,brand,serial_number')
                 ->whereIn('id', $assign_ticket_ids);
+        } elseif (Auth::user()->role == 'super_admin') {
+            $ticketList = Ticket::with('user:id,name,address,phone', 'asset:id,organization_id,product,brand,serial_number', 'asset.organization:id,name');
         } else {
-            // Default for normal users
-            $ticketList = Ticket::with('user:id,name,address,phone', 'asset:id,product,brand,serial_number')
+            $ticketList = Ticket::with('user:id,name,address,phone', 'asset:id,organization_id,product,brand,serial_number', 'asset.organization:id,name')
                 ->where('user_id', Auth::user()->id);
         }
 
