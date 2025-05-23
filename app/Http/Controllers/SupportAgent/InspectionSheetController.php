@@ -210,10 +210,14 @@ class InspectionSheetController extends Controller
         $perPage = $request->input('per_page', 10);
         $search  = $request->input('search');
         $filter  = $request->input('filter');
+        $type  = $request->input('type');
 
-        $inspectionList = InspectionSheet::with('assigned:id,name', 'ticket:id,asset_id,user_id',
+        $inspectionList = InspectionSheet::with('assigned:id,name', 'ticket:id,asset_id,user_id,order_number',
             'ticket.asset:id,product,brand,serial_number', 'ticket.user:id,name,address,phone', 'technician:id,name,image');
 
+        if ($type) {
+            $inspectionList = $inspectionList->where('inspection_sheet_type', $type);
+        }
         if ($search) {
             $inspectionList = $inspectionList->where('inspection_sheet_type', $search);
         }

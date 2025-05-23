@@ -97,35 +97,47 @@ class TicketController extends Controller
         ], 200);
     }
 
-    //all ticket list with status dsf
     // public function ticketList(Request $request)
     // {
     //     $perPage = $request->input('per_page', 10);
     //     $search  = $request->input('search');
+    //     $type  = $request->input('type');
     //     $filter  = $request->input('filter');
-    //     if (Auth::user()->role == 'technician') {
-    //         $assign_ticket_ids = InspectionSheet::where('technician_id', Auth::user()->id)->get()->pluck('ticket_id')->unique();
-    //         $ticketList        = Ticket::with('user:id,name,address,phone', 'asset:id,product,brand,serial_number')->whereIn('id', $assign_ticket_ids);
-    //     }
-    //                 // $ticketList = Ticket::with('user:id,name,address,phone', 'asset:id,product,brand,serial_number');
 
-    //     if (Auth::user()->role == 'user') {
-    //         $ticketList = $ticketList->where('user_id', Auth::user()->id);
+    //     if (Auth::user()->role == 'technician') {
+    //        $assign_ticket_ids = InspectionSheet::where('technician_id', Auth::user()->id)
+    //             ->pluck('ticket_id')
+    //             ->unique();
+    //         $ticketList = Ticket::with('user:id,name,address,phone', 'asset:id,product,brand,serial_number')
+    //             ->whereIn('id', $assign_ticket_ids);
+    //     } elseif (Auth::user()->role == 'super_admin') {
+    //         $ticketList = Ticket::with('user:id,name,address,phone', 'asset:id,organization_id,product,brand,serial_number', 'asset.organization:id,name');
+    //     } else {
+    //         $ticketList = Ticket::with('user:id,name,address,phone', 'asset:id,organization_id,product,brand,serial_number', 'asset.organization:id,name')
+    //             ->where('user_id', Auth::user()->id);
     //     }
-    //     //search
+
+    //     // search (restricted within user's own data)
     //     if ($search) {
-    //         $ticketList = $ticketList->where('ticket_type', $search)
-    //         ->orWhere('order_number',"LIKE","%".$search."%");
+    //         $ticketList = $ticketList->where('order_number', 'LIKE', "%{$search}%")->orWhereHas('asset',function($q) use($search){
+    //             $q->where('product', 'LIKE', "%{$search}%")
+    //                 ->orWhere('serial_number', 'LIKE', "%{$search}%");
+    //         });
     //     }
-    //     // Apply role filter
+    //     if ($type) {
+    //         $ticketList = $ticketList->where('ticket_type', 'LIKE', "%{$type}%");
+    //     }
+
+    //     // filter
     //     if (! empty($filter)) {
-    //         $ticketList->where('ticket_status', $filter);
+    //         $ticketList = $ticketList->where('ticket_status', $filter);
     //     }
+
     //     $ticketList = $ticketList->paginate($perPage);
+
     //     return response()->json([
     //         'status' => true,
     //         'data'   => $ticketList,
-
     //     ]);
     // }
 
@@ -133,34 +145,61 @@ class TicketController extends Controller
     {
         $perPage = $request->input('per_page', 10);
         $search  = $request->input('search');
+        $type    = $request->input('type');
         $filter  = $request->input('filter');
 
-        if (Auth::user()->role == 'technician') {
-            $assign_ticket_ids = InspectionSheet::where('technician_id', Auth::user()->id)
+        // Common relationships to eager load
+        $with = [
+            'user:id,name,address,phone',
+            'asset:id,organization_id,product,brand,serial_number',
+            'asset.organization:id,name',
+        ];
+
+        $user = Auth::user();
+
+        // Step 1: Role-based ticket filtering
+        if ($user->role === 'technician') {
+            $assign_ticket_ids = InspectionSheet::where('technician_id', $user->id)
                 ->pluck('ticket_id')
                 ->unique();
-            $ticketList = Ticket::with('user:id,name,address,phone', 'asset:id,product,brand,serial_number')
-                ->whereIn('id', $assign_ticket_ids);
-        } elseif (Auth::user()->role == 'super_admin') {
-            $ticketList = Ticket::with('user:id,name,address,phone', 'asset:id,organization_id,product,brand,serial_number', 'asset.organization:id,name');
+
+            $ticketList = Ticket::with($with)->whereIn('id', $assign_ticket_ids);
+            $ticketList = $ticketList->where(function ($query) use ($search) {
+                $query->where('order_number', 'LIKE', "%{$search}%")
+                    ->orWhereHas('asset', function ($q) use ($search) {
+                        $q->where('product', 'LIKE', "%{$search}%")
+                            ->orWhere('serial_number', 'LIKE', "%{$search}%");
+                    });
+            });
+
+        } elseif ($user->role === 'super_admin') {
+            $ticketList = Ticket::with($with);
         } else {
-            $ticketList = Ticket::with('user:id,name,address,phone', 'asset:id,organization_id,product,brand,serial_number', 'asset.organization:id,name')
-                ->where('user_id', Auth::user()->id);
+            $ticketList = Ticket::with($with)->where('user_id', $user->id);
         }
 
-        // search (restricted within user's own data)
-        if ($search) {
+        // Step 2: Search within scoped tickets (safe for technicians)
+        if ($search && $user->role !== 'technician') {
             $ticketList = $ticketList->where(function ($query) use ($search) {
-                $query->where('ticket_type', 'LIKE', "%{$search}%")
-                    ->orWhere('order_number', 'LIKE', "%{$search}%");
+                $query->where('order_number', 'LIKE', "%{$search}%")
+                    ->orWhereHas('asset', function ($q) use ($search) {
+                        $q->where('product', 'LIKE', "%{$search}%")
+                            ->orWhere('serial_number', 'LIKE', "%{$search}%");
+                    });
             });
         }
 
-        // filter
+        // Step 3: Filter by ticket type
+        if ($type) {
+            $ticketList = $ticketList->where('ticket_type', $type);
+        }
+
+        // Step 4: Filter by ticket status
         if (! empty($filter)) {
             $ticketList = $ticketList->where('ticket_status', $filter);
         }
 
+        // Step 5: Paginate the results
         $ticketList = $ticketList->paginate($perPage);
 
         return response()->json([
