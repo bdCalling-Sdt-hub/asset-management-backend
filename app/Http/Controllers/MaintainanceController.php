@@ -50,7 +50,7 @@ class MaintainanceController extends Controller
     }
     public function getReminder()
     {
-        $reminder = Maintainance::with(['asset'])->where('user_id',Auth::user()->id)->where('status', 'RemindMeLetter')->first();
+        $reminder = Maintainance::with(['asset'])->where('user_id', Auth::user()->id)->where('status', 'RemindMeLetter')->first();
         if ($reminder) {
             return response()->json([
                 'status'  => true,
@@ -67,8 +67,17 @@ class MaintainanceController extends Controller
 
     public function maintainanceGet(Request $request)
     {
-        $maintainances = Maintainance::with(['asset:id,product', 'technician:id,name'])->paginate($request->per_page ?? 10);
-        $maintainances->getCollection()->transform(function ($maintainance) {
+        $maintainances = Maintainance::with(['asset:id,product', 'technician:id,name'])->latest('id');
+
+        if ($request->search) {
+            $maintainances = $maintainances->whereHas('asset', function ($q) use ($request) {
+                $q->where('product', 'LIKE', '%' . $request->search . '%');
+            });
+        }
+
+        $maintainances = $maintainances->paginate($request->per_page ?? 10);
+
+        $filtered = $maintainances->getCollection()->transform(function ($maintainance) use ($request) {
             $last_maintainance_date = Carbon::parse($maintainance->last_maintainance_date);
             $next_schedule          = Carbon::parse($maintainance->next_schedule);
             $diffInYears            = $last_maintainance_date->diffInYears($next_schedule);
@@ -82,6 +91,8 @@ class MaintainanceController extends Controller
                 $maintainance_type = 'Low';
             }
 
+            $maintainance->maintainance_type = $maintainance_type;
+
             return [
                 'id'                     => $maintainance->id,
                 'maintainance_item'      => $maintainance->asset->product ?? null,
@@ -92,9 +103,18 @@ class MaintainanceController extends Controller
                 'maintainance_type'      => $maintainance_type,
             ];
         });
+
+        if ($request->sort) {
+            $filtered = $filtered->filter(function ($item) use ($request) {
+                return $item['maintainance_type'] === $request->sort;
+            })->values();
+        }
+
+        $maintainances->setCollection($filtered);
+
         return response()->json([
             'status'  => true,
-            'message' => 'Data retrieve successfully.',
+            'message' => 'Data retrieved successfully.',
             'data'    => $maintainances,
         ]);
     }
