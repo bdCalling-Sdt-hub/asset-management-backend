@@ -191,18 +191,21 @@ class JobCardController extends Controller
         return response()->json([
             'status' => true, 'message' => 'Job Card deleted successfully'], 200);
     }
+
     public function JobCardList(Request $request)
     {
         $perPage = $request->input('per_page', 10);
         $search  = $request->input('search');
         $filter  = $request->input('filter');
+        $type    = $request->input('type');
 
         if (Auth::user()->role == 'technician') {
             $assign_ticket_ids = InspectionSheet::where('technician_id', Auth::user()->id)
                 ->pluck('ticket_id')
                 ->unique();
             $ticketListIds = Ticket::whereIn('id', $assign_ticket_ids)->pluck('id');
-            $cardList      = JobCard::with('supportAgent:id,name',
+            $cardList      = JobCard::with(
+                'supportAgent:id,name',
                 'inspectionSheet:id,ticket_id,support_agent_id,technician_id',
                 'inspectionSheet.assigned:id,name',
                 'inspectionSheet.technician:id,name,image',
@@ -219,16 +222,25 @@ class JobCardController extends Controller
                 'inspectionSheet.ticket.user:id,name,address,phone');
         }
 
-        if ($search) {
-            $cardList = $cardList->where('inspection_sheet_type', $search);
+        if ($type) {
+            $cardList = $cardList->where('job_card_type', $type);
         }
+        if ($search) {
+            $cardList = $cardList->whereHas('inspectionSheet.ticket', function ($q) use ($search) {
+                $q->where('order_number', 'like', '%' . $search . '%');
+            })->orWhereHas('inspectionSheet.ticket.asset', function ($q) use ($search) {
+                $q->where('product', 'LIKE', '%' . $search . '%')->orWhere('serial_number', 'LIKE', '%' . $search . '%');
+            });
+        }
+
         if (! empty($filter)) {
-            $cardList = $cardList->where('status', $filter);
+            $cardList = $cardList->where('job_status', $filter);
         }
         $cardList = $cardList->paginate($perPage);
 
         return response()->json(['status' => true, 'data' => $cardList], 200);
     }
+
     public function detailsJobCard(Request $request, $id)
     {
         $card_details = JobCard::with('supportAgent:id,name',
