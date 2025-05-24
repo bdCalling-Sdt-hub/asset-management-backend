@@ -195,7 +195,7 @@ class AssetController extends Controller
     {
         $asset = Asset::with([
             'organization:id,name',
-            'tickets:id,asset_id,problem,cost',
+            'tickets:id,asset_id,problem,cost,order_number,ticket_type,created_at',
         ])->find($id);
 
         if (! $asset) {

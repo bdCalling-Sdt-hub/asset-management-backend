@@ -23,7 +23,7 @@ class MaintainanceController extends Controller
 
     public function assetGet()
     {
-        $assets = Asset::select('id', 'product', 'brand')->get();
+        $assets = Asset::select('id', 'product', 'brand','location')->get();
         return response()->json([
             'status'  => true,
             'message' => 'Asset retrieve successfully.',
@@ -41,6 +41,7 @@ class MaintainanceController extends Controller
             'next_schedule'     => $request->next_schedule,
             'status'            => $request->status,
             'reminder_category' => $request->reminder_category,
+            'location' => $request->location,
         ]);
         return response()->json([
             'status'  => true,
@@ -101,6 +102,7 @@ class MaintainanceController extends Controller
                 'technician'             => $maintainance->technician->name ?? null,
                 'next_schedule'          => $maintainance->next_schedule,
                 'maintainance_type'      => $maintainance_type,
+                'location'      => $maintainance->location,
             ];
         });
 

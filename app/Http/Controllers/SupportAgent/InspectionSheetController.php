@@ -61,6 +61,7 @@ class InspectionSheetController extends Controller
             'image'                       => json_encode($newImages),
             'video'                       => json_encode($newVideos),
             'status'                      => $request->status ?? 'New',
+            'inspection_order_number'     => rand(10000000, 99999999),
         ]);
         $ticket = Ticket::findOrFail($request->ticket_id);
         $ticket->update([
@@ -223,19 +224,19 @@ class InspectionSheetController extends Controller
             $inspectionList = $inspectionList->where('inspection_sheet_type', $type);
         }
 
-        if ($search) {
-            $inspectionList = $inspectionList->where(function ($query) use ($search) {
-                $query->whereHas('ticket', function ($q) use ($search) {
-                    $q->where('order_number', 'LIKE', '%' . $search . '%');
-                })->orWhereHas('ticket.asset', function ($q) use ($search) {
-                    $q->where('product', 'LIKE', '%' . $search . '%')
-                        ->orWhere('serial_number', 'LIKE', '%' . $search . '%');
-                });
+   if ($search) {
+    $inspectionList = $inspectionList->where(function ($query) use ($search) {
+        $query->where('inspection_order_number', 'LIKE', '%' . $search . '%')
+            ->orWhereHas('ticket.asset', function ($q) use ($search) {
+                $q->where('product', 'LIKE', '%' . $search . '%')
+                    ->orWhere('serial_number', 'LIKE', '%' . $search . '%');
             });
-        }
+    });
+}
+
 
         if ($filter) {
-            $inspectionList = $inspectionList->where('status', 'LIKE','%'.$filter.'%');
+            $inspectionList = $inspectionList->where('status', 'LIKE', '%' . $filter . '%');
         }
         $inspectionList = $inspectionList->paginate($perPage);
 

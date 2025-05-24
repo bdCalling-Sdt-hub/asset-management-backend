@@ -37,6 +37,7 @@ class JobCardController extends Controller
             'technician_comment'          => $request->technician_comment,
             'location_employee_signature' => $request->location_employee_signature,
             'job_status'                  => $request->job_status ?? 'New',
+            'job_card_order_number'       => rand(10000000, 99999999),
         ]);
         $job_card->load(
             'supportAgent:id,name',
@@ -226,10 +227,12 @@ class JobCardController extends Controller
             $cardList = $cardList->where('job_card_type', $type);
         }
         if ($search) {
-            $cardList = $cardList->whereHas('inspectionSheet.ticket', function ($q) use ($search) {
-                $q->where('order_number', 'like', '%' . $search . '%');
-            })->orWhereHas('inspectionSheet.ticket.asset', function ($q) use ($search) {
-                $q->where('product', 'LIKE', '%' . $search . '%')->orWhere('serial_number', 'LIKE', '%' . $search . '%');
+            $cardList = $cardList->where(function ($query) use ($search) {
+                $query->where('job_card_order_number', 'LIKE', '%' . $search . '%')
+                    ->orWhereHas('inspectionSheet.ticket.asset', function ($q) use ($search) {
+                        $q->where('product', 'LIKE', '%' . $search . '%')
+                            ->orWhere('serial_number', 'LIKE', '%' . $search . '%');
+                    });
             });
         }
 

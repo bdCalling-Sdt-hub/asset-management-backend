@@ -44,6 +44,7 @@ class FAQController extends Controller
         $data = $validator->validated();
         $faq->question = $data['question'] ?? $faq->question;
         $faq->answer = $data['answer'] ?? $faq->answer;
+        $faq->save();
 
         return response()->json(['status'=>true, 'message'=>$faq],201);
     }
