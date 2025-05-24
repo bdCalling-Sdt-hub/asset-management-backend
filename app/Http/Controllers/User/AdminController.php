@@ -564,7 +564,7 @@ class AdminController extends Controller
     public function userList(Request $request)
     {
         $search = $request->input('search');
-        $filter = $request->input('filter');
+        $role = $request->input('role');
         $sortBy = $request->input('sort_by');
 
         $currentUser = auth()->user();
@@ -593,8 +593,8 @@ class AdminController extends Controller
             $userlist->orderBy('id', 'asc');
         }
 
-        if (! empty($filter)) {
-            $userlist->where('role', $filter);
+        if ($role) {
+            $userlist->where('role', $role);
         }
 
         $users = $userlist->paginate(10);
@@ -609,7 +609,6 @@ class AdminController extends Controller
             ];
 
             if ($user->role === 'organization' || $user->role === 'third_party') {
-                // Count all users created by this organization
                 $totalUsersCreated = User::where('creator_id', $user->id)->count();
 
                 return array_merge($commonData, [

@@ -9,8 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class SupportAgent extends Controller
-{
-    // chart statistics for support agent dashboard
+{   
     public function chartSupportAgent(Request $request)
     {
         $filter    = $request->query('filter', 'weekly');

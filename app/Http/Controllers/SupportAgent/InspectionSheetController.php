@@ -210,19 +210,32 @@ class InspectionSheetController extends Controller
         $perPage = $request->input('per_page', 10);
         $search  = $request->input('search');
         $filter  = $request->input('filter');
-        $type  = $request->input('type');
+        $type    = $request->input('type');
 
-        $inspectionList = InspectionSheet::with('assigned:id,name', 'ticket:id,asset_id,user_id,order_number',
+        $inspectionList = InspectionSheet::with('assigned:id,name', 'ticket:id,asset_id,user_id,order_number,problem',
             'ticket.asset:id,product,brand,serial_number', 'ticket.user:id,name,address,phone', 'technician:id,name,image');
-
+        if (Auth::user()->role == 'support_agent') {
+            $inspectionList = $inspectionList->where('support_agent_id', Auth::user()->id);
+        } elseif (Auth::user()->role == 'technician') {
+            $inspectionList = $inspectionList->where('technician_id', Auth::user()->id);
+        }
         if ($type) {
             $inspectionList = $inspectionList->where('inspection_sheet_type', $type);
         }
+
         if ($search) {
-            $inspectionList = $inspectionList->where('inspection_sheet_type', $search);
+            $inspectionList = $inspectionList->where(function ($query) use ($search) {
+                $query->whereHas('ticket', function ($q) use ($search) {
+                    $q->where('order_number', 'LIKE', '%' . $search . '%');
+                })->orWhereHas('ticket.asset', function ($q) use ($search) {
+                    $q->where('product', 'LIKE', '%' . $search . '%')
+                        ->orWhere('serial_number', 'LIKE', '%' . $search . '%');
+                });
+            });
         }
-        if (! empty($filter)) {
-            $inspectionList = $inspectionList->where('status', $filter);
+
+        if ($filter) {
+            $inspectionList = $inspectionList->where('status', 'LIKE','%'.$filter.'%');
         }
         $inspectionList = $inspectionList->paginate($perPage);
 

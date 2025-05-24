@@ -44,7 +44,7 @@ class NewTicketNotification extends Notification
     public function toArray(object $notifiable): array
     {
         return [
-            'message'    => 'A new ticket has been created by ',
+            'message'    => 'A new ticket has been created.',
             'ticket_id'  => $this->ticket->id,
             'product'  => $this->ticket->asset->product,
             'serial_number'  => $this->ticket->asset->serial_number,
