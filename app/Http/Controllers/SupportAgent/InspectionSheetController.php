@@ -251,7 +251,7 @@ class InspectionSheetController extends Controller
 
         } elseif ($request->inspection_id) {
             $sheet_details = InspectionSheet::with('assigned:id,name', 'ticket:id,asset_id,user_id,problem',
-                'ticket.asset:id,product,brand,serial_number', 'ticket.user:id,name,address,phone', 'technician:id,name,image')->find($request->inspection_id);
+                'ticket.asset:id,product,brand,serial_number,organization_id', 'ticket.user:id,name,address,phone', 'technician:id,name,image','ticket.asset.organization:id,name,email,role,image')->find($request->inspection_id);
         }
 
         if (! $sheet_details) {

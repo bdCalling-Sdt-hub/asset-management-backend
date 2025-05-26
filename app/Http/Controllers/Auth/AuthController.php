@@ -230,12 +230,12 @@ class AuthController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'name'        => 'nullable|string|max:255',
-            'address'     => 'nullable|string|max:255',
-            'phone'       => 'nullable|string|max:16',
-            'password'    => 'nullable|string|min:6|confirmed',
+            'name'        => 'sometimes|string|max:255',
+            'address'     => 'sometimes|string|max:255',
+            'phone'       => 'sometimes|string|max:16',
+            'password'    => 'sometimes|string|min:6|confirmed',
             'image'   => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:10240',
-            'documents.*' => 'nullable|file',
+            'documents.*' => 'sometimes|file',
         ]);
 
         if ($validator->fails()) {

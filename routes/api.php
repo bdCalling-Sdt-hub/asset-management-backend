@@ -90,10 +90,11 @@ Route::middleware(['auth:api', 'super_admin'])->group(function () {
     Route::delete('delete-faq/{id}', [FAQController::class, 'deleteFaq']);
 
     //report
-    Route::post('create-report', [ReportController::class, 'createReport']);
-    Route::get('list-report', [ReportController::class, 'listReports']);
-    Route::get('details-report/{id}', [ReportController::class, 'detailsReports']);
+    // Route::post('create-report', [ReportController::class, 'createReport']);
+    // Route::get('list-report', [ReportController::class, 'listReports']);
+    // Route::get('details-report/{id}', [ReportController::class, 'detailsReports']);
 
+    Route::get('make-report', [ReportController::class, 'makeReport']);
 });
 
 Route::middleware(['auth:api', 'user'])->group(function () {
@@ -158,7 +159,7 @@ Route::middleware(['auth:api', 'super_admin.third_party.organization'])->group(f
 });
 
 Route::middleware(['auth:api', 'super_admin.location_employee.organization'])->group(function () {
-    Route::get('technician', [MaintainanceController::class, 'technicianGet']);
+    // Route::get('technician', [MaintainanceController::class, 'technicianGet']);
     Route::get('asset', [MaintainanceController::class, 'assetGet']);
     Route::get('maintainance', [MaintainanceController::class, 'maintainanceGet']);
 
@@ -231,4 +232,5 @@ Route::middleware(['auth:api', 'common'])->group(function () {
     Route::post('mark-all-notification', [NotificationController::class, 'allMark'])->name('allMark');
 
     Route::get('get-organization', [OrganizationController::class, 'getOrganization']);
+    Route::get('technician', [MaintainanceController::class, 'technicianGet']);
 });

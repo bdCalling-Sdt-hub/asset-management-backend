@@ -10,23 +10,50 @@ use Illuminate\Support\Facades\Validator;
 class MessageController extends Controller
 {
 
-    public function searchNewUser(Request $request)
-    {
-        $users = User::with('organization:id,name')->where('role', $request->role);
-        if ($request->organization_id) {
-            $users = $users->where('organization_id', $request->organization_id);
-        }
-        if ($request->search) {
-            $users = $users->where('name', 'LIKE', '%' . $request->search . '%')->orWhere('email', 'LIKE', '%' . $request->search . '%');
-        }
+    // public function searchNewUser(Request $request)
+    // {
+    //     $users = User::with('organization:id,name')->whereNot('id',Auth::id())->where('role', $request->role);
+    //     if ($request->organization_id) {
+    //         $users = $users->where('organization_id', $request->organization_id);
+    //     }
+    //     if ($request->search) {
+    //         $users = $users->where('name', 'LIKE', '%' . $request->search . '%')->orWhere('email', 'LIKE', '%' . $request->search . '%');
+    //     }
 
-        $users = $users->get();
-        return response()->json([
-            'status'  => true,
-            'message' => 'Data retrieve successfully',
-            'data'    => $users,
-        ]);
+    //     $users = $users->get();
+    //     return response()->json([
+    //         'status'  => true,
+    //         'message' => 'Data retrieve successfully',
+    //         'data'    => $users,
+    //     ]);
+    // }
+
+    public function searchNewUser(Request $request)
+{
+    $users = User::with('organization:id,name')
+        ->where('id', '!=', Auth::id())
+        ->where('role', $request->role);
+
+    if ($request->organization_id) {
+        $users->where('organization_id', $request->organization_id);
     }
+
+    if ($request->search) {
+        $users->where(function ($query) use ($request) {
+            $query->where('name', 'LIKE', '%' . $request->search . '%')
+                  ->orWhere('email', 'LIKE', '%' . $request->search . '%');
+        });
+    }
+
+    $users = $users->get();
+
+    return response()->json([
+        'status'  => true,
+        'message' => 'Data retrieve successfully',
+        'data'    => $users,
+    ]);
+}
+
 
 
     // public function chatList(Request $request)
