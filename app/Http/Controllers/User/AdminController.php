@@ -257,31 +257,58 @@ class AdminController extends Controller
 
     public function getProviders(Request $request)
     {
-        $role     = $request->role;
-        $paginate = $request->paginate ?? 10;
-        if (in_array($role, ['third_party', 'technician', 'location_employee', 'support_agent'])) {
-            $users = User::with('organization:id,name,role')
-                ->where('role', $role)
-                ->select('id', 'organization_id', 'name', 'email', 'phone', 'image', 'address', 'role')
-                ->latest('id')
-                ->paginate($paginate);
+        $role          = $request->role;
+        $paginate      = $request->paginate ?? 10;
+        $search        = $request->search;
+        $sort          = $request->sort;
+        $sortDirection = 'asc';
 
+        $validRoles = ['third_party', 'technician', 'location_employee', 'support_agent', 'organization'];
+
+        if (! in_array($role, $validRoles)) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Invalid role provided.',
+                'data'    => null,
+            ], 400);
         }
-        if ($role == 'organization') {
-            $users = User::where('role', 'organization')
-                ->select('id', 'organization_id', 'name', 'email', 'phone', 'image', 'address', 'role')
-                ->withCount([
-                    'technicians',
-                    'supportAgents',
-                    'locationEmployees',
-                ])
-                ->paginate($paginate);
+
+        $query = User::select('users.id', 'users.organization_id', 'users.name', 'users.email', 'users.phone', 'users.image', 'users.address', 'users.role')
+            ->where('role', $role);
+
+        if ($role === 'organization') {
+            $query->withCount(['technicians', 'supportAgents', 'locationEmployees']);
+        } else {
+            $query->with('organization:id,name,role');
         }
+        if ($search) {
+            $query->where(function ($q) use ($search, $role) {
+                $q->where('name', 'like', "%$search%")
+                    ->orWhere('address', 'like', "%$search%");
+
+                if ($role !== 'organization') {
+                    $q->orWhereHas('organization', function ($orgQuery) use ($search) {
+                        $orgQuery->where('name', 'like', "%$search%");
+                    });
+                }
+            });
+        }
+
+        $allowedSortFields = ['id', 'name', 'address'];
+
+        if (in_array($sort, $allowedSortFields)) {
+            $query->orderBy($sort, $sortDirection);
+        } else {
+            $query->orderBy('id', 'desc');
+        }
+
+        $users = $query->paginate($paginate);
 
         return response()->json([
             'status'  => true,
-            'message' => $role . ' retrieved successfully',
+            'message' => ucfirst($role) . 's retrieved successfully',
             'data'    => $users,
         ]);
     }
+
 }
