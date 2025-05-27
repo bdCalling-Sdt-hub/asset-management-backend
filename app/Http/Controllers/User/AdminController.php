@@ -10,15 +10,17 @@ use Illuminate\Support\Facades\Validator;
 
 class AdminController extends Controller
 {
-    //create or add organization
-    public function addOrganization(Request $request)
+    public function addUser(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'name'        => 'required|string|max:255',
-            'email'       => 'required|string|email|unique:users,email',
-            'password'    => 'required|string|min:6',
-            'address'     => 'required|string',
-            'documents.*' => 'nullable|file',
+            'name'            => 'required|string|max:255',
+            'organization_id' => 'required|numeric|exists:users,id',
+            'email'           => 'required|string|email|unique:users,email',
+            'password'        => 'required|string|min:6',
+            'role'            => 'required|in:organization,support_agent,location_employee,technician,third_party',
+            'address'         => 'required|string',
+            'photo'           => 'sometimes|mimes:jpg,png,jpeg|max:10240',
+            'documents.*'     => 'sometimes|file',
         ]);
         if ($validator->fails()) {
             return response()->json(['status' => false, 'message' => $validator->errors()], 422);
@@ -32,28 +34,37 @@ class AdminController extends Controller
                 $newDocuments[] = $documentName;
             }
         }
-
-        $organization = User::create([
-            'user_id'    => Auth::user()->id,
-            'name'       => $request->name,
-            'email'      => $request->email,
-            'role'       => 'organization',
-            'password'   => Hash::make($request->password),
-            'address'    => $request->address,
-            'document'   => json_encode($newDocuments),
-            'creator_id' => auth()->id(),
+        if ($request->hasFile('photo')) {
+            $image     = $request->file('image');
+            $extension = $image->getClientOriginalExtension();
+            $newName   = time() . '.' . $extension;
+            $image->move(public_path('uploads/profile_images'), $newName);
+        }
+        $user = User::create([
+            'name'            => $request->name,
+            'email'           => $request->email,
+            'role'            => $request->role,
+            'password'        => Hash::make($request->password),
+            'image'           => $newName,
+            'address'         => $request->address,
+            'document'        => json_encode($newDocuments),
+            'organization_id' => $request->organization_id,
+            'creator_id'      => Auth::user()->id,
         ]);
 
-        $organization->save();
-
-        return response()->json(['status' => true, 'message' => 'Organization Create Successfully', 'organization' => $organization], 200);
+        return response()->json([
+            'status'  => true,
+            'message' => $request->role . ' Created Successfully',
+            'data'    => $user,
+        ], 200);
     }
+
     //update organization
     public function updateOrganization(Request $request, $id)
     {
         $organization = User::find($id);
 
-        if (!$organization) {
+        if (! $organization) {
             return response()->json(['status' => false, 'message' => 'User not found'], 200);
         }
 
@@ -120,49 +131,12 @@ class AdminController extends Controller
 
         return response()->json(['status' => true, 'message' => 'Organization Update Successfully', 'organization' => $organization], 200);
     }
-    //create or add third party
-    public function addThirdParty(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'name'        => 'required|string|max:255',
-            'email'       => 'required|string|email|unique:users,email',
-            'password'    => 'required|string|min:6',
-            'address'     => 'required|string',
-            'documents.*' => 'nullable|file',
-        ]);
-        if ($validator->fails()) {
-            return response()->json(['status' => false, 'message' => $validator->errors()], 422);
-        }
-        // Upload new documents
-        $newDocuments = [];
-        if ($request->hasFile('documents')) {
-            foreach ($request->file('documents') as $document) {
-                $documentName = time() . uniqid() . '_' . $document->getClientOriginalName();
-                $document->move(public_path('uploads/documents'), $documentName);
-                $newDocuments[] = $documentName;
-            }
-        }
 
-        $third_party = User::create([
-            'name'       => $request->name,
-            'email'      => $request->email,
-            'role'       => 'third_party',
-            'password'   => Hash::make($request->password),
-            'address'    => $request->address,
-            'document'   => json_encode($newDocuments),
-            'creator_id' => auth()->id(),
-
-        ]);
-
-        $third_party->save();
-
-        return response()->json(['status' => true, 'message' => 'Third Party Create Successfully', 'third_party' => $third_party], 200);
-    }
     //update third party
     public function updateThirdParty(Request $request, $id)
     {
         $third_party = User::find($id);
-        if (!$third_party) {
+        if (! $third_party) {
             return response()->json(['status' => false, 'message' => 'User not found'], 200);
         }
 
@@ -230,48 +204,12 @@ class AdminController extends Controller
         return response()->json(['status' => true, 'message' => 'third_party Update Successfully', 'third_party' => $third_party], 200);
     }
     //location employee add
-    public function addEmployee(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'name'        => 'required|string|max:255',
-            'email'       => 'required|string|email|unique:users,email',
-            'password'    => 'required|string|min:6',
-            'address'     => 'required|string',
-            'documents.*' => 'nullable|file',
-        ]);
-        if ($validator->fails()) {
-            return response()->json(['status' => false, 'message' => $validator->errors()], 422);
-        }
-        // Upload new documents
-        $newDocuments = [];
-        if ($request->hasFile('documents')) {
-            foreach ($request->file('documents') as $document) {
-                $documentName = time() . uniqid() . '_' . $document->getClientOriginalName();
-                $document->move(public_path('uploads/documents'), $documentName);
-                $newDocuments[] = $documentName;
-            }
-        }
 
-        $location_employee = User::create([
-            'name'       => $request->name,
-            'email'      => $request->email,
-            'role'       => 'location_employee',
-            'password'   => Hash::make($request->password),
-            'address'    => $request->address,
-            'document'   => json_encode($newDocuments),
-            'creator_id' => auth()->id(),
-
-        ]);
-
-        $location_employee->save();
-
-        return response()->json(['status' => true, 'message' => 'location_employee Create Successfully', 'location employee' => $location_employee], 200);
-    }
     //update location mployee
     public function updateEmployee(Request $request, $id)
     {
         $location_employee = User::find($id);
-        if (!$location_employee) {
+        if (! $location_employee) {
             return response()->json(['status' => false, 'message' => 'User not found'], 200);
         }
 
@@ -339,48 +277,12 @@ class AdminController extends Controller
         return response()->json(['status' => true, 'message' => 'Location Employee Update Successfully', 'location_employee' => $location_employee], 200);
     }
     //create or add Support agent
-    public function addAgent(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'name'        => 'required|string|max:255',
-            'email'       => 'required|string|email|unique:users,email',
-            'password'    => 'required|string|min:6',
-            'address'     => 'required|string',
-            'documents.*' => 'nullable|file',
-        ]);
-        if ($validator->fails()) {
-            return response()->json(['status' => false, 'message' => $validator->errors()], 422);
-        }
-        // Upload new documents
-        $newDocuments = [];
-        if ($request->hasFile('documents')) {
-            foreach ($request->file('documents') as $document) {
-                $documentName = time() . uniqid() . '_' . $document->getClientOriginalName();
-                $document->move(public_path('uploads/documents'), $documentName);
-                $newDocuments[] = $documentName;
-            }
-        }
 
-        $support_agent = User::create([
-            'name'       => $request->name,
-            'email'      => $request->email,
-            'role'       => 'support_agent',
-            'password'   => Hash::make($request->password),
-            'address'    => $request->address,
-            'document'   => json_encode($newDocuments),
-            'creator_id' => auth()->id(),
-
-        ]);
-
-        $support_agent->save();
-
-        return response()->json(['status' => true, 'message' => 'Support Agent Create Successfully', 'support_agent' => $support_agent], 200);
-    }
     //update support_agent
     public function updateSAgent(Request $request, $id)
     {
         $support_agent = User::find($id);
-        if (!$support_agent) {
+        if (! $support_agent) {
             return response()->json(['status' => false, 'message' => 'User not found'], 200);
         }
 
@@ -451,50 +353,12 @@ class AdminController extends Controller
 
         return response()->json(['status' => true, 'message' => 'Support Agent Update Successfully', 'support_agent' => $support_agent], 200);
     }
-    //create or add technicain
-    public function technicianAdd(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'name'        => 'required|string|max:255',
-            'email'       => 'required|string|email|unique:users,email',
-            'password'    => 'required|string|min:6',
-            'address'     => 'required|string',
-            'documents.*' => 'nullable|file',
-        ]);
-        if ($validator->fails()) {
-            return response()->json(['status' => false, 'message' => $validator->errors()], 422);
-        }
-        // Upload new documents
-        $newDocuments = [];
-        if ($request->hasFile('documents')) {
-            foreach ($request->file('documents') as $document) {
-                $documentName = time() . uniqid() . '_' . $document->getClientOriginalName();
-                $document->move(public_path('uploads/documents'), $documentName);
-                $newDocuments[] = $documentName;
-            }
-        }
-
-        $technician = User::create([
-            'name'       => $request->name,
-            'email'      => $request->email,
-            'role'       => 'technician',
-            'password'   => Hash::make($request->password),
-            'address'    => $request->address,
-            'document'   => json_encode($newDocuments),
-            'creator_id' => auth()->id(),
-
-        ]);
-
-        $technician->save();
-
-        return response()->json(['status' => true, 'message' => 'Support Agent Create Successfully', 'technician' => $technician], 200);
-    }
     //update support_agent
     public function technicianUpdate(Request $request, $id)
     {
         $technician = User::findOrFail($id);
 
-        if (!$technician) {
+        if (! $technician) {
             return response()->json(['status' => false, 'message' => 'User not found'], 200);
         }
         $validator = Validator::make($request->all(), [
@@ -564,7 +428,7 @@ class AdminController extends Controller
     public function userList(Request $request)
     {
         $search = $request->input('search');
-        $role = $request->input('role');
+        $role   = $request->input('role');
         $sortBy = $request->input('sort_by');
 
         $currentUser = auth()->user();

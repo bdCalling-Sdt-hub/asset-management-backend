@@ -55,23 +55,14 @@ Route::middleware(['auth:api', 'super_admin'])->group(function () {
     //job card
     Route::get('card-statistics', [SuperAdmin::class, 'statisticsJobCard']);
 
+    //user routes
+    Route::post('add-user', [AdminController::class, 'addUser']);
+
     //add and update organization
-    Route::post('organization-add', [AdminController::class, 'addOrganization']);
     Route::post('organization-update/{id}', [AdminController::class, 'updateOrganization']);
-
-    Route::post('third-party-add', [AdminController::class, 'addThirdParty']);
     Route::post('third-party-update/{id}', [AdminController::class, 'updateThirdParty']);
-
-    //add and update location employee
-    Route::post('employee-add', [AdminController::class, 'addEmployee']);
     Route::post('employee-update/{id}', [AdminController::class, 'updateEmployee']);
-
-    //add and update support agent
-    Route::post('agent-add', [AdminController::class, 'addAgent']);
     Route::post('agent-update/{id}', [AdminController::class, 'updateSAgent']);
-
-    //add and update technician
-    Route::post('add-technician', [AdminController::class, 'technicianAdd']);
     Route::post('update-technician/{id}', [AdminController::class, 'technicianUpdate']);
 
     Route::get('delete-user/{id}', [AdminController::class, 'deleteUser']);
