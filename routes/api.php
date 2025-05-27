@@ -49,23 +49,16 @@ Route::middleware(['auth:api', 'super_admin'])->group(function () {
     Route::get('super-admin-overview', [SuperAdmin::class, 'overview']);
     Route::get('super-admin-chart', [SuperAdmin::class, 'chartsuperAdmin']);
 
-    Route::get('ticket-activity-super', [SuperAdmin::class, 'activityTicket']);
+    // Route::get('ticket-activity-super', [SuperAdmin::class, 'activityTicket']);
     //inspection sheet
     Route::get('inspection-statistics', [SuperAdmin::class, 'statisticsInspectionSheet']);
     //job card
     Route::get('card-statistics', [SuperAdmin::class, 'statisticsJobCard']);
 
-    //user routes
-    Route::post('add-user', [AdminController::class, 'addUser']);
 
-    //add and update organization
-    Route::post('organization-update/{id}', [AdminController::class, 'updateOrganization']);
-    Route::post('third-party-update/{id}', [AdminController::class, 'updateThirdParty']);
-    Route::post('employee-update/{id}', [AdminController::class, 'updateEmployee']);
-    Route::post('agent-update/{id}', [AdminController::class, 'updateSAgent']);
-    Route::post('update-technician/{id}', [AdminController::class, 'technicianUpdate']);
 
-    Route::get('delete-user/{id}', [AdminController::class, 'deleteUser']);
+
+
     Route::get('soft-delete-user', [AdminController::class, 'SoftDeletedUsers']);
 
     //assetlist
@@ -205,7 +198,7 @@ Route::middleware(['auth:api', 'organization'])->group(function () {
 });
 Route::middleware(['auth:api', 'support_agent'])->group(function () {
     Route::get('support-agent-dashboard', [SupportAgent::class, 'chartSupportAgent']);
-    Route::get('ticket-activity', [SupportAgent::class, 'activityTicket']);
+
     //inspection sheet
     Route::get('inspection-sheet-statistics', [SupportAgent::class, 'statisticsInspectionSheet']);
     //job card
@@ -224,4 +217,13 @@ Route::middleware(['auth:api', 'common'])->group(function () {
 
     Route::get('get-organization', [OrganizationController::class, 'getOrganization']);
     Route::get('technician', [MaintainanceController::class, 'technicianGet']);
+     Route::get('ticket-activity', [SupportAgent::class, 'activityTicket']);
+});
+
+Route::middleware(['auth:api', 'super_admin.organization'])->group(function () {
+        //user routes
+    Route::post('add-user', [AdminController::class, 'addUser']);
+    Route::put('update-user/{id}', [AdminController::class, 'updateUser']);
+    Route::get('delete-user/{id}', [AdminController::class, 'deleteUser']);
+    Route::get('get-providers', [AdminController::class, 'getProviders']);
 });

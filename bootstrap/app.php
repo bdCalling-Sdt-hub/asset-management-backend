@@ -6,6 +6,7 @@ use App\Http\Middleware\LocationEmployee;
 use App\Http\Middleware\Organization;
 use App\Http\Middleware\SuperAdmin;
 use App\Http\Middleware\SuperAdminOrganizationLocationEmployeeMiddleware;
+use App\Http\Middleware\SuperAdminOrganizationMIddleware;
 use App\Http\Middleware\SupportAgent;
 use App\Http\Middleware\SupportAgentLocationEmployeeTechnicianMiddleware;
 use App\Http\Middleware\Technician;
@@ -32,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'technician'                                             => Technician::class,
             'user'                                                   => User::class,
             'common'                                                 => CommonMiddleware::class,
+            'super_admin.organization'                                                 => SuperAdminOrganizationMIddleware::class,
             'super_admin.third_party.organization'                   => CreatorMiddleware::class,
             'super_admin.location_employee.organization'             => SuperAdminOrganizationLocationEmployeeMiddleware::class,
             'support_agent.location_employee.technician.third_party' => SupportAgentLocationEmployeeTechnicianMiddleware::class,

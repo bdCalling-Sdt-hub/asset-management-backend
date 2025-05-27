@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use App\Http\Controllers\SupportAgent\InspectionSheetController;
@@ -12,9 +11,9 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 class User extends Authenticatable implements JWTSubject
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable,SoftDeletes;
+    use HasFactory, Notifiable, SoftDeletes;
 
-    protected $dates = ['deleted_at'];
+    protected $dates   = ['deleted_at'];
     protected $guarded = ['id'];
 
     /**
@@ -36,7 +35,7 @@ class User extends Authenticatable implements JWTSubject
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'password'          => 'hashed',
             // 'document' => 'array',
         ];
     }
@@ -49,7 +48,6 @@ class User extends Authenticatable implements JWTSubject
     {
         return [];
     }
-
 
     public function getImageAttribute($image)
     {
@@ -78,8 +76,26 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasMany(InspectionSheetController::class);
     }
-public function organization(){
-    return $this->belongsTo(User::class);
-}
+    public function organization()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+// In User.php
+
+    public function technicians()
+    {
+        return $this->hasMany(User::class, 'organization_id', 'id')->where('role', 'technician');
+    }
+
+    public function supportAgents()
+    {
+        return $this->hasMany(User::class, 'organization_id', 'id')->where('role', 'support_agent');
+    }
+
+    public function locationEmployees()
+    {
+        return $this->hasMany(User::class, 'organization_id', 'id')->where('role', 'location_employee');
+    }
 
 }
