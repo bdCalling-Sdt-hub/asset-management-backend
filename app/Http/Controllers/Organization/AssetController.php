@@ -52,6 +52,7 @@ class AssetController extends Controller
             'has_odometer'           => 'nullable|string',
             'location'               => 'nullable|string',
             'residual_price'         => 'nullable|string',
+            'organization_id'         => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -80,6 +81,7 @@ class AssetController extends Controller
             'has_odometer'           => $request->has_odometer,
             'location'               => $request->location,
             'residual_price'         => $request->residual_price,
+            'organization_id'         => $request->organization_id,
         ]);
 
         return response()->json([

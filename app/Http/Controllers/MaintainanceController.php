@@ -69,7 +69,8 @@ class MaintainanceController extends Controller
 
     public function maintainanceGet(Request $request)
     {
-        $maintainances = Maintainance::with(['asset:id,product', 'technician:id,name', 'maintainanceChecks']);
+        $type          = $request->maintainance_type;
+        $maintainances = Maintainance::with(['asset:id,product', 'technician:id,name']);
 
         if ($request->search) {
             $maintainances = $maintainances->whereHas('asset', function ($q) use ($request) {
@@ -79,7 +80,7 @@ class MaintainanceController extends Controller
 
         $maintainances = $maintainances->paginate($request->per_page ?? 10);
 
-        $filtered = $maintainances->getCollection()->transform(function ($maintainance) use ($request) {
+        $filtered = $maintainances->getCollection()->transform(function ($maintainance) use ($request, $type) {
             $last_maintainance_date = Carbon::parse($maintainance->last_maintainance_date);
             $next_schedule          = Carbon::parse($maintainance->next_schedule);
             $diffInYears            = $last_maintainance_date->diffInYears($next_schedule);
@@ -94,7 +95,14 @@ class MaintainanceController extends Controller
             }
 
             $maintainance->maintainance_type = $maintainance_type;
+            $request_data                    = new Request([
+                'maintainance_id'   => $maintainance->id,
+                'maintainance_type' => $type,
+            ]);
+            $checked_maintainance = $this->getCheckedMaintainance($request_data);
+            $dataArray            = $checked_maintainance->getData(true);
 
+            $checked_data = $dataArray['data'];
             return [
                 'id'                     => $maintainance->id,
                 'maintainance_item'      => $maintainance->asset->product ?? null,
@@ -102,6 +110,7 @@ class MaintainanceController extends Controller
                 'technician'             => $maintainance->technician->name ?? null,
                 'next_schedule'          => $maintainance->next_schedule,
                 'maintainance_type'      => $maintainance_type,
+                'checked_maintainance'   => $checked_data,
                 'location'               => $maintainance->location,
             ];
         });
@@ -264,10 +273,11 @@ class MaintainanceController extends Controller
         ], 400);
     }
 
-    public function getCheckedMaintainance(Request $request)
+    private function getCheckedMaintainance(Request $request)
     {
         $startOfMonth      = now()->startOfMonth();
         $maintainanace_day = MaintainanceCheck::where('maintainance_id', $request->maintainance_id);
+
         if ($request->maintainance_type === 'weekly') {
             $startOfWeek = now()->startOfWeek();
             $endOfWeek   = now()->endOfWeek();
@@ -275,17 +285,25 @@ class MaintainanceController extends Controller
             $maintainanace_day = $maintainanace_day
                 ->where('maintainance_type', 'weekly')
                 ->whereBetween('created_at', [$startOfWeek, $endOfWeek])
-                ->select('week');
+                ->pluck('week');
         } elseif ($request->maintainance_type == 'monthly') {
-            $maintainanace_day = $maintainanace_day->where('maintainance_type', $request->maintainance_type)->whereYear('created_at', now())->select('month');
+            $maintainanace_day = $maintainanace_day
+                ->where('maintainance_type', 'monthly')
+                ->whereYear('created_at', now())
+                ->pluck('month');
         } elseif ($request->maintainance_type == 'yearly') {
-            $maintainanace_day = $maintainanace_day->where('maintainance_type', $request->maintainance_type)->select('year');
+            $maintainanace_day = $maintainanace_day
+                ->where('maintainance_type', 'yearly')
+                ->pluck('year');
+        } else {
+            $maintainanace_day = collect();
         }
-        $maintainanace_day = $maintainanace_day->get();
+
         return response()->json([
             'status'  => true,
             'message' => 'Maintainace day retreived successfull',
             'data'    => $maintainanace_day,
         ]);
     }
+
 }
