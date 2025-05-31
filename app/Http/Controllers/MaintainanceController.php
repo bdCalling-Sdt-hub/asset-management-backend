@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Asset;
 use App\Models\Maintainance;
+use App\Models\MaintainanceCheck;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -23,7 +24,7 @@ class MaintainanceController extends Controller
 
     public function assetGet()
     {
-        $assets = Asset::select('id', 'product', 'brand','location')->get();
+        $assets = Asset::select('id', 'product', 'brand', 'location')->get();
         return response()->json([
             'status'  => true,
             'message' => 'Asset retrieve successfully.',
@@ -41,7 +42,7 @@ class MaintainanceController extends Controller
             'next_schedule'     => $request->next_schedule,
             'status'            => $request->status,
             'reminder_category' => $request->reminder_category,
-            'location' => $request->location,
+            'location'          => $request->location,
         ]);
         return response()->json([
             'status'  => true,
@@ -68,7 +69,7 @@ class MaintainanceController extends Controller
 
     public function maintainanceGet(Request $request)
     {
-        $maintainances = Maintainance::with(['asset:id,product', 'technician:id,name'])->latest('id');
+        $maintainances = Maintainance::with(['asset:id,product', 'technician:id,name', 'maintainanceChecks']);
 
         if ($request->search) {
             $maintainances = $maintainances->whereHas('asset', function ($q) use ($request) {
@@ -97,12 +98,11 @@ class MaintainanceController extends Controller
             return [
                 'id'                     => $maintainance->id,
                 'maintainance_item'      => $maintainance->asset->product ?? null,
-                'checked_list'           => $maintainance->checked,
                 'last_maintainance_date' => $maintainance->last_maintainance,
                 'technician'             => $maintainance->technician->name ?? null,
                 'next_schedule'          => $maintainance->next_schedule,
                 'maintainance_type'      => $maintainance_type,
-                'location'      => $maintainance->location,
+                'location'               => $maintainance->location,
             ];
         });
 
@@ -126,15 +126,166 @@ class MaintainanceController extends Controller
         $validation = Validator::make($request->all(), [
             'checked' => 'required',
         ]);
+        if ($validation->fails()) {
+            return response()->json(['error', $validation->errors()]);
+        }
         $maintainance = Maintainance::findOrFail($id);
         $maintainance->update([
-            'checked' => $request->checked,
-            'status'  => $request->status,
+            'status' => $request->status,
         ]);
         return response()->json([
             'status'  => true,
             'message' => 'Data update successfully.',
             'data'    => $maintainance,
+        ]);
+    }
+
+    public function toggleMaintainanceDay(Request $request)
+    {
+        $request->validate([
+            'maintainance_id'   => 'required|exists:maintainances,id',
+            'maintainance_type' => 'required|in:weekly,monthly,yearly',
+            'day'               => 'nullable|string',
+            'month'             => 'nullable|string',
+            'year'              => 'nullable|integer|min:2000|max:2100',
+        ]);
+
+        $maintainanceId = $request->maintainance_id;
+        $type           = $request->maintainance_type;
+        $dayName        = $request->day;
+        $currentYear    = now()->year; // Always use current year
+
+        $query = MaintainanceCheck::where('maintainance_id', $maintainanceId)
+            ->where('maintainance_type', $type);
+
+        if ($type === 'weekly') {
+            $startOfWeek = now()->startOfWeek()->toDateString();
+            $endOfWeek   = now()->endOfWeek()->toDateString();
+
+            $existing = $query->where('week', $dayName)
+                ->whereYear('created_at', $currentYear)
+                ->whereDate('period_start', $startOfWeek)
+                ->first();
+
+            if ($existing) {
+                $existing->delete();
+                return response()->json([
+                    'status'  => true,
+                    'message' => "$dayName removed from this week’s maintenance.",
+                    'action'  => 'unchecked',
+                ]);
+            } else {
+                $check = MaintainanceCheck::create([
+                    'maintainance_id'   => $maintainanceId,
+                    'maintainance_type' => $type,
+                    'week'              => $dayName,
+                    'period_start'      => $startOfWeek,
+                    'period_end'        => $endOfWeek,
+                ]);
+                return response()->json([
+                    'status'  => true,
+                    'message' => "$dayName added to this week’s maintenance.",
+                    'action'  => 'checked',
+                    'data'    => $check,
+                ]);
+            }
+
+        } elseif ($type === 'monthly') {
+            $monthName    = $request->month ?? now()->format('F');
+            $startOfMonth = now()->startOfMonth()->toDateString();
+            $endOfMonth   = now()->endOfMonth()->toDateString();
+
+            $existing = $query
+                ->where('month', $monthName)
+                ->whereYear('created_at', $currentYear)
+                ->whereDate('period_start', $startOfMonth)
+                ->first();
+
+            if ($existing) {
+                $existing->delete();
+                return response()->json([
+                    'status'  => true,
+                    'message' => "$dayName removed from this month’s maintenance.",
+                    'action'  => 'unchecked',
+                ]);
+            } else {
+                $check = MaintainanceCheck::create([
+                    'maintainance_id'   => $maintainanceId,
+                    'maintainance_type' => $type,
+                    'day'               => $dayName,
+                    'month'             => $monthName,
+                    'period_start'      => $startOfMonth,
+                    'period_end'        => $endOfMonth,
+                ]);
+                return response()->json([
+                    'status'  => true,
+                    'message' => "$dayName added to this month’s maintenance.",
+                    'action'  => 'checked',
+                    'data'    => $check,
+                ]);
+            }
+
+        } elseif ($type === 'yearly') {
+            $startOfYear = now()->startOfYear()->toDateString();
+            $endOfYear   = now()->endOfYear()->toDateString();
+
+            $existing = $query
+                ->where('year', $currentYear)
+                ->first();
+
+            if ($existing) {
+                $existing->delete();
+                return response()->json([
+                    'status'  => true,
+                    'message' => "$dayName removed from this year’s maintenance.",
+                    'action'  => 'unchecked',
+                ]);
+            } else {
+                $check = MaintainanceCheck::create([
+                    'maintainance_id'   => $maintainanceId,
+                    'maintainance_type' => $type,
+                    'day'               => $dayName,
+                    'year'              => $currentYear, // Always current year
+                    'period_start'      => $startOfYear,
+                    'period_end'        => $endOfYear,
+                ]);
+                return response()->json([
+                    'status'  => true,
+                    'message' => "$dayName added to this year’s maintenance.",
+                    'action'  => 'checked',
+                    'data'    => $check,
+                ]);
+            }
+        }
+
+        return response()->json([
+            'status'  => false,
+            'message' => 'Invalid maintenance type or data.',
+        ], 400);
+    }
+
+    public function getCheckedMaintainance(Request $request)
+    {
+        $startOfMonth      = now()->startOfMonth();
+        $maintainanace_day = MaintainanceCheck::where('maintainance_id', $request->maintainance_id);
+        if ($request->maintainance_type === 'weekly') {
+            $startOfWeek = now()->startOfWeek();
+            $endOfWeek   = now()->endOfWeek();
+
+            $maintainanace_day = $maintainanace_day
+                ->where('maintainance_type', 'weekly')
+                ->whereBetween('created_at', [$startOfWeek, $endOfWeek])
+                ->select('week');
+        } elseif ($request->maintainance_type == 'monthly') {
+            $maintainanace_day = $maintainanace_day->where('maintainance_type', $request->maintainance_type)->whereYear('created_at', now())->select('month');
+        } elseif ($request->maintainance_type == 'yearly') {
+            $maintainanace_day = $maintainanace_day->where('maintainance_type', $request->maintainance_type)->select('year');
+        }
+        $maintainanace_day = $maintainanace_day->get();
+        return response()->json([
+            'status'  => true,
+            'message' => 'Maintainace day retreived successfull',
+            'data'    => $maintainanace_day,
         ]);
     }
 }

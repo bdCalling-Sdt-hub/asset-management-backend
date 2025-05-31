@@ -18,9 +18,8 @@ return new class extends Migration
             $table->foreignId('technician_id')->nullable()->constrained('users')->cascadeOnDelete();
             $table->date('last_maintainance')->nullable();
             $table->date('next_schedule')->nullable();
-            $table->json('checked')->nullable();
-            $table->enum('status',['RemindMeLetter','ContactToTechnician'])->default('RemindMeLetter');
-            $table->enum('reminder_category',['Weekly','Monthly','Yearly'])->default('Weekly');
+            $table->enum('status', ['RemindMeLetter', 'ContactToTechnician'])->default('RemindMeLetter');
+            $table->enum('reminder_category', ['Weekly', 'Monthly', 'Yearly'])->default('Weekly');
             $table->timestamps();
         });
     }

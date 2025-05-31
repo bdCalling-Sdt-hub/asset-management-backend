@@ -14,7 +14,7 @@ class AdminController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name'            => 'required|string|max:255',
-            'organization_id' => 'required|numeric|exists:users,id',
+            'organization_id' => 'sometimes|numeric|exists:users,id',
             'email'           => 'required|string|email|unique:users,email',
             'password'        => 'required|string|min:6',
             'role'            => 'required|in:organization,support_agent,location_employee,technician,third_party',
@@ -61,10 +61,11 @@ class AdminController extends Controller
 
     public function updateUser(Request $request, $oldImage)
     {
+        $user = User::findOrFail($request->id);
         $validator = Validator::make($request->all(), [
             'name'            => 'required|string|max:255',
-            'organization_id' => 'required|numeric|exists:users,id',
-            'email'           => 'required|string|email|unique:users,email',
+            'organization_id' => 'sometimes|numeric|exists:users,id',
+            'email'           => 'required|email|unique:users,email,'.$user->id,
             'password'        => 'required|string|min:6',
             'address'         => 'required|string',
             'photo'           => 'sometimes|mimes:jpg,png,jpeg|max:10240',
@@ -73,7 +74,6 @@ class AdminController extends Controller
         if ($validator->fails()) {
             return response()->json(['status' => false, 'message' => $validator->errors()], 422);
         }
-        $user = User::findOrFail($request->id);
         if ($request->hasFile('documents')) {
             $existingDocuments = $user->document;
 

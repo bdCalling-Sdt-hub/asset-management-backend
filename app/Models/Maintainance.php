@@ -19,9 +19,14 @@ class Maintainance extends Model
     public function user(){
         return $this->belongsTo(User::class,'user_id');
     }
-    public function getCheckedAttribute($checked)
+    // public function getCheckedAttribute($checked)
+    // {
+    //     return $checked ? json_decode($checked, true) : [];
+    // }
+
+    public function maintainanceChecks()
     {
-        return $checked ? json_decode($checked, true) : [];
+        return $this->hasMany(MaintainanceCheck::class);
     }
 
 }

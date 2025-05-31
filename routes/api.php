@@ -55,10 +55,6 @@ Route::middleware(['auth:api', 'super_admin'])->group(function () {
     //job card
     Route::get('card-statistics', [SuperAdmin::class, 'statisticsJobCard']);
 
-
-
-
-
     Route::get('soft-delete-user', [AdminController::class, 'SoftDeletedUsers']);
 
     //assetlist
@@ -131,13 +127,13 @@ Route::middleware(['auth:api', 'super_admin.third_party.organization'])->group(f
     Route::get('user-details/{id}', [AdminController::class, 'userDetails']);
     Route::get('get-user-details/{id}', [OrganizationController::class, 'getuserDetails']);
 
-    //asset route
-    Route::post('create-asset', [AssetController::class, 'createAsset']);
-    Route::post('update-asset/{id}', [AssetController::class, 'updateAsset']);
-    Route::get('asset-list', [AssetController::class, 'assetList']);
-    Route::get('asset-maturity/{id}', [AssetController::class, 'assetMaturity']);
-    Route::get('asset-details/{id}', [AssetController::class, 'assetDetails']);
-    Route::delete('delete-asset/{id}', [AssetController::class, 'deleteAsset']);
+    // //asset route
+    // Route::post('create-asset', [AssetController::class, 'createAsset']);
+    // Route::post('update-asset/{id}', [AssetController::class, 'updateAsset']);
+    // Route::get('asset-list', [AssetController::class, 'assetList']);
+    // Route::get('asset-maturity/{id}', [AssetController::class, 'assetMaturity']);
+    // Route::get('asset-details/{id}', [AssetController::class, 'assetDetails']);
+    // Route::delete('delete-asset/{id}', [AssetController::class, 'deleteAsset']);
 
     Route::post('import-asset', [AssetController::class, 'importAssets']);
 });
@@ -147,12 +143,23 @@ Route::middleware(['auth:api', 'super_admin.location_employee.organization'])->g
     Route::get('asset', [MaintainanceController::class, 'assetGet']);
     Route::get('maintainance', [MaintainanceController::class, 'maintainanceGet']);
 
+
+        //asset route
+    Route::post('create-asset', [AssetController::class, 'createAsset']);
+    Route::post('update-asset/{id}', [AssetController::class, 'updateAsset']);
+    Route::get('asset-list', [AssetController::class, 'assetList']);
+    Route::get('asset-maturity/{id}', [AssetController::class, 'assetMaturity']);
+    Route::get('asset-details/{id}', [AssetController::class, 'assetDetails']);
+    Route::delete('delete-asset/{id}', [AssetController::class, 'deleteAsset']);
+
 });
 
 Route::middleware(['auth:api', 'location_employee'])->group(function () {
     Route::post('set-reminder', [MaintainanceController::class, 'setReminder']);
     Route::get('get-reminder', [MaintainanceController::class, 'getReminder']);
     Route::post('update-maintainance/{id}', [MaintainanceController::class, 'updateStatus']);
+    Route::get('get-maintainance-day', [MaintainanceController::class, 'getCheckedMaintainance']);
+    Route::post('update-maintainance-day', [MaintainanceController::class, 'toggleMaintainanceDay']);
     Route::get('location-employee-dashboard', [LocationEmployee::class, 'dashboard']);
 });
 
@@ -217,13 +224,13 @@ Route::middleware(['auth:api', 'common'])->group(function () {
 
     Route::get('get-organization', [OrganizationController::class, 'getOrganization']);
     Route::get('technician', [MaintainanceController::class, 'technicianGet']);
-     Route::get('ticket-activity', [SupportAgent::class, 'activityTicket']);
+    Route::get('ticket-activity', [SupportAgent::class, 'activityTicket']);
 });
 
 Route::middleware(['auth:api', 'super_admin.organization'])->group(function () {
-        //user routes
+    //user routes
     Route::post('add-user', [AdminController::class, 'addUser']);
     Route::put('update-user/{id}', [AdminController::class, 'updateUser']);
-    Route::get('delete-user/{id}', [AdminController::class, 'deleteUser']);
+    Route::delete('delete-user/{id}', [AdminController::class, 'deleteUser']);
     Route::get('get-providers', [AdminController::class, 'getProviders']);
 });
