@@ -239,7 +239,7 @@ class MaintainanceController extends Controller
             $endOfYear   = now()->endOfYear()->toDateString();
 
             $existing = $query
-                ->where('year', $currentYear)
+                ->where('year', $request->year)
                 ->first();
 
             if ($existing) {
@@ -254,7 +254,7 @@ class MaintainanceController extends Controller
                     'maintainance_id'   => $maintainanceId,
                     'maintainance_type' => $type,
                     'day'               => $dayName,
-                    'year'              => $currentYear, // Always current year
+                    'year'              =>  $request->year,
                     'period_start'      => $startOfYear,
                     'period_end'        => $endOfYear,
                 ]);
@@ -273,37 +273,126 @@ class MaintainanceController extends Controller
         ], 400);
     }
 
+    // private function getCheckedMaintainance(Request $request)
+    // {
+    //     $startOfMonth      = now()->startOfMonth();
+    //     $maintainanace_day = MaintainanceCheck::where('maintainance_id', $request->maintainance_id);
+
+    //     if ($request->maintainance_type === 'weekly') {
+    //         $startOfWeek = now()->startOfWeek();
+    //         $endOfWeek   = now()->endOfWeek();
+
+    //         $maintainanace_day = $maintainanace_day
+    //             ->where('maintainance_type', 'weekly')
+    //             ->whereBetween('created_at', [$startOfWeek, $endOfWeek])
+    //             ->pluck('week');
+    //     } elseif ($request->maintainance_type == 'monthly') {
+    //         $maintainanace_day = $maintainanace_day
+    //             ->where('maintainance_type', 'monthly')
+    //             ->whereYear('created_at', now())
+    //             ->pluck('month');
+    //     } elseif ($request->maintainance_type == 'yearly') {
+    //         $maintainanace_day = $maintainanace_day
+    //             ->where('maintainance_type', 'yearly')
+    //             ->pluck('year');
+    //     } else {
+    //         $maintainanace_day = collect();
+    //     }
+
+    //     return response()->json([
+    //         'status'  => true,
+    //         'message' => 'Maintainace day retreived successfull',
+    //         'data'    => $maintainanace_day,
+    //     ]);
+    // }
+
     private function getCheckedMaintainance(Request $request)
     {
-        $startOfMonth      = now()->startOfMonth();
-        $maintainanace_day = MaintainanceCheck::where('maintainance_id', $request->maintainance_id);
+        $maintainanceCheck = MaintainanceCheck::where('maintainance_id', $request->maintainance_id);
 
         if ($request->maintainance_type === 'weekly') {
             $startOfWeek = now()->startOfWeek();
             $endOfWeek   = now()->endOfWeek();
 
-            $maintainanace_day = $maintainanace_day
+            $maintainance_days = $maintainanceCheck
                 ->where('maintainance_type', 'weekly')
                 ->whereBetween('created_at', [$startOfWeek, $endOfWeek])
-                ->pluck('week');
-        } elseif ($request->maintainance_type == 'monthly') {
-            $maintainanace_day = $maintainanace_day
+                ->pluck('week')
+                ->toArray();
+
+            $weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+            $daysStatus = [];
+            foreach ($weekDays as $day) {
+                $daysStatus[$day] = in_array($day, $maintainance_days);
+            }
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Weekly maintenance days retrieved successfully',
+                'data'    => [
+                    'maintainance_days' => $maintainance_days,
+                    'days'              => $daysStatus,
+                ],
+            ]);
+
+        } elseif ($request->maintainance_type === 'monthly') {
+
+            $maintainance_days = $maintainanceCheck
                 ->where('maintainance_type', 'monthly')
                 ->whereYear('created_at', now())
-                ->pluck('month');
-        } elseif ($request->maintainance_type == 'yearly') {
-            $maintainanace_day = $maintainanace_day
-                ->where('maintainance_type', 'yearly')
-                ->pluck('year');
-        } else {
-            $maintainanace_day = collect();
-        }
+                ->pluck('month')
+                ->toArray();
 
-        return response()->json([
-            'status'  => true,
-            'message' => 'Maintainace day retreived successfull',
-            'data'    => $maintainanace_day,
-        ]);
+            $months = [
+                'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+            ];
+
+            $monthsStatus = [];
+            foreach ($months as $month) {
+                $monthsStatus[$month] = in_array($month, $maintainance_days);
+            }
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Monthly maintenance months retrieved successfully',
+                'data'    => [
+                    'maintainance_days' => $maintainance_days,
+                    'months'            => $monthsStatus,
+                ],
+            ]);
+
+        } elseif ($request->maintainance_type === 'yearly') {
+            $maintainance_days = $maintainanceCheck
+                ->where('maintainance_type', 'yearly')
+                ->pluck('year')
+                ->toArray();
+
+            $currentYear = date('Y');
+            $yearRange   = range($currentYear - 2, $currentYear + 4);
+
+            $yearsStatus = [];
+            foreach ($yearRange as $year) {
+                $yearsStatus[$year] = in_array($year, $maintainance_days);
+            }
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Yearly maintenance years retrieved successfully',
+                'data'    => [
+                    'maintainance_days' => $maintainance_days,
+                    'years'             => $yearsStatus,
+                    'dynamic_year'      => $yearRange,
+                ],
+            ]);
+        } else {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Invalid maintenance type',
+                'data'    => [],
+            ]);
+        }
     }
 
 }

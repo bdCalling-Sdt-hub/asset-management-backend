@@ -51,21 +51,39 @@ class AssetImport implements ToModel, WithChunkReading, WithHeadingRow
      * @param string $date
      * @return string|null
      */
-    private function parseDate($date)
-    {
-        $formats = ['d/m/Y', 'm/d/Y', 'Y-m-d']; // Add other formats as needed
-
-        foreach ($formats as $format) {
-            try {
-                return Carbon::createFromFormat($format, $date)->format('Y-m-d');
-            } catch (\Exception $e) {
-                // Continue to the next format
-            }
-        }
-
-        // Return null if no formats match
+private function parseDate($date)
+{
+    if (!$date) {
         return null;
     }
+
+    // Already a Carbon instance
+    if ($date instanceof \Carbon\Carbon) {
+        return $date->format('Y-m-d');
+    }
+
+    // If numeric serial (Excel date)
+    if (is_numeric($date)) {
+        try {
+            return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($date)->format('Y-m-d');
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    // Else, try string formats
+    $formats = ['d/m/Y', 'm/d/Y', 'Y-m-d'];
+    foreach ($formats as $format) {
+        try {
+            return \Carbon\Carbon::createFromFormat($format, $date)->format('Y-m-d');
+        } catch (\Exception $e) {
+            // Next format
+        }
+    }
+
+    // No valid format
+    return null;
+}
 
     /**
      * Number of rows to read per chunk.
