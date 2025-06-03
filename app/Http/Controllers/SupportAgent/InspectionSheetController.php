@@ -24,7 +24,6 @@ class InspectionSheetController extends Controller
             'location_employee_signature' => 'nullable|string',
             'image'                       => 'nullable|',
             'video'                       => 'nullable',
-            'status'                      => 'nullable',
         ]);
         if ($validator->fails()) {
             return response()->json(['status' => false, 'message' => $validator->errors()], 401);
@@ -66,6 +65,8 @@ class InspectionSheetController extends Controller
         $ticket = Ticket::findOrFail($request->ticket_id);
         $ticket->update([
             'assigned_user_id' => auth()->id(),
+            'ticket_type'=>'Open Tickets',
+            'ticket_status'=>'Assigned'
         ]);
 
         // Eager load the related user and asset
@@ -238,7 +239,7 @@ class InspectionSheetController extends Controller
         if ($filter) {
             $inspectionList = $inspectionList->where('status', 'LIKE', '%' . $filter . '%');
         }
-        $inspectionList = $inspectionList->paginate($perPage);
+        $inspectionList = $inspectionList->latest('id')->paginate($perPage);
 
         return response()->json(['status' => true, 'data' => $inspectionList], 200);
 

@@ -172,9 +172,10 @@ class TicketController extends Controller
                     });
             });
 
-        } elseif ($user->role === 'super_admin') {
+        } elseif ($user->role === 'super_admin'|| $user->role === 'support_agent') {
             $ticketList = Ticket::with($with);
-        } else {
+        }
+        else {
             $ticketList = Ticket::with($with)->where('user_id', $user->id);
         }
 
@@ -200,7 +201,7 @@ class TicketController extends Controller
         }
 
         // Step 5: Paginate the results
-        $ticketList = $ticketList->paginate($perPage);
+        $ticketList = $ticketList->latest('id')->paginate($perPage);
 
         return response()->json([
             'status' => true,
