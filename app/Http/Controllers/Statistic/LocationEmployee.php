@@ -80,7 +80,7 @@ class LocationEmployee extends Controller
           $completedCount  = $model::whereIn($column, $completedStatuses)->whereBetween('created_at', [$startDate, $endDate])->count();
 
           // Helper to calculate percentage
-          $calcPercentage = fn($count) => $total ? number_format(($count / $total) * 100, 2) : 0;
+          $calcPercentage = fn($count) => $total ? number_format(($count / $total) * 100, 2) : '0.00';
 
           return [
               'New'         => ['count' => $newCount, 'percentage' => $calcPercentage($newCount)],
