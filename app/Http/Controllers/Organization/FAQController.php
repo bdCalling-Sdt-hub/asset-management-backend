@@ -51,8 +51,7 @@ class FAQController extends Controller
     // faq list get
     public function listFaq(Request $request)
     {
-        $faq = FAQ::paginate(10);
-
+        $faq = FAQ::orderBy('id', 'DESC')->paginate(10);
         return response()->json(['status'=>true, 'data' =>$faq],201);
     }
     //delete faq

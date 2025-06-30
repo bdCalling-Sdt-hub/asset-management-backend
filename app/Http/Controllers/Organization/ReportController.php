@@ -288,7 +288,6 @@ class ReportController extends Controller
 {
     try {
         $data = null;
-
         if ($request->ticket_id) {
             $ticket = Ticket::with(
                 'user:id,name,email,address,role,phone,image,status',

@@ -74,8 +74,8 @@ Route::middleware(['auth:api', 'super_admin'])->group(function () {
     // Route::get('list-report', [ReportController::class, 'listReports']);
     // Route::get('details-report/{id}', [ReportController::class, 'detailsReports']);
 
-    Route::get('make-report', [ReportController::class, 'makeReport']);
 });
+Route::get('make-report', [ReportController::class, 'makeReport'])->middleware('super_admin.organization','auth:api');
 
 Route::middleware(['auth:api', 'user'])->group(function () {
 

@@ -172,7 +172,18 @@ class TicketController extends Controller
                     });
             });
 
-        } elseif ($user->role === 'super_admin'|| $user->role === 'support_agent') {
+        } elseif ($user->role === 'super_admin' || $user->role === 'support_agent') {
+            $ticketList = Ticket::with($with);
+        } elseif ($user->role === 'organization') {
+            $ticketList = Ticket::with($with)->whereHas('asset', function ($query) use ($user) {
+                $query->where('organization_id', Auth::user()->id);
+            });
+        } elseif ($user->role === 'location_employee') {
+            $ticketList = Ticket::with($with)->whereHas('asset', function ($query) use ($user) {
+                $query->where('organization_id', Auth::user()->organization_id);
+            });
+        }
+        elseif ($user->role === 'third_party') {
             $ticketList = Ticket::with($with);
         }
         else {
@@ -217,10 +228,14 @@ class TicketController extends Controller
         if (! $ticket) {
             return response()->json(['status' => false, 'message' => 'Ticket Not Found'], status: 200);
         }
+       $inspection_sheets =  InspectionSheet::where('ticket_id',$id)->get();
 
         return response()->json([
             'status' => true,
-            'data'   => $ticket,
+            'data'   => [
+                'ticket' =>  $ticket,
+                'inspection_sheets'=>$inspection_sheets
+            ]
         ]);
     }
 

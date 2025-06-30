@@ -33,7 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'technician'                                             => Technician::class,
             'user'                                                   => User::class,
             'common'                                                 => CommonMiddleware::class,
-            'super_admin.organization'                                                 => SuperAdminOrganizationMIddleware::class,
+            'super_admin.organization'                               => SuperAdminOrganizationMIddleware::class,
             'super_admin.third_party.organization'                   => CreatorMiddleware::class,
             'super_admin.location_employee.organization'             => SuperAdminOrganizationLocationEmployeeMiddleware::class,
             'support_agent.location_employee.technician.third_party' => SupportAgentLocationEmployeeTechnicianMiddleware::class,

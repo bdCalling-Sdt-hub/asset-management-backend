@@ -9,7 +9,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class VerifyOTP extends Mailable
+class VerifyOTP extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
@@ -36,6 +36,7 @@ class VerifyOTP extends Mailable
     {
         return new Content(
             view: 'email.otp',
+            with:['opt'=>$this->otp]
         );
     }
 

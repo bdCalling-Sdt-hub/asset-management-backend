@@ -74,7 +74,7 @@ class AuthController extends Controller
         ]);
 
         try {
-            Mail::to($user->email)->send(new VerifyOTP($otp));
+            Mail::to($request->email)->queue(new VerifyOTP($otp));
         } catch (Exception $e) {
             Log::error($e->getMessage());
         }
@@ -362,7 +362,7 @@ class AuthController extends Controller
         );
 
         try {
-            Mail::to($request->email)->send(new VerifyOTP($otp));
+            Mail::to($request->email)->queue(new VerifyOTP($otp));
         } catch (Exception $e) {
             Log::error($e->getMessage());
             return response()->json(['error' => 'Failed to send OTP.'], 500);
@@ -416,7 +416,7 @@ class AuthController extends Controller
         );
 
         try {
-            Mail::to($request->email)->send(new VerifyOTP($otp));
+            Mail::to($request->email)->queue(new VerifyOTP($otp));
         } catch (Exception $e) {
             Log::error($e->getMessage());
             return response()->json(['error' => 'Failed to resend OTP.'], 500);
